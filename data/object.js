@@ -38,6 +38,7 @@ export let autoBattle = {
 	lootAvg: {
 		accumulator: 0,
 		counter: 0,
+    normalized: 0,
 	},
 	rings: {
 		level: 1,
@@ -2983,7 +2984,17 @@ export let autoBattle = {
 		amt *= this.getDustMult();
 		return amt;
 	},
+  accumulateNormalizedDust: function () {
+    let amt = (1 + (this.enemy.level - 1) * 5) * Math.pow(1.19, this.enemy.level - 1);
+		if (this.enemy.level >= 50) amt *= Math.pow(1.1, this.enemy.level - 49);
+		amt *= 1
+        + (this.items.Lifegiving_Gem.equipped ? this.items.Lifegiving_Gem.dustIncrease() : 0)
+        + (this.oneTimers.Dusty_Tome.owned ? 0.05 * this.enemy.level : 0)
+        + this.trimp.dustMult;
+    this.lootAvg.normalized += amt;
+  },
 	enemyDied: function () {
+    this.accumulateNormalizedDust();
 		//this.notes += "Enemy Died. "
 		this.sessionEnemiesKilled++;
 		var amt = this.getDustReward();
@@ -3039,6 +3050,7 @@ export let autoBattle = {
 		this.sessionTrimpsKilled = 0;
 		this.lootAvg.accumulator = 0;
 		this.lootAvg.counter = 0;
+    this.lootAvg.normalized = 0;
 		this.battleTime = 0;
 	},
 	//popup stuff

@@ -69,6 +69,8 @@ function getElements() {
         shardsPs: document.getElementById("shardsPs"),
         limbsUsed: document.getElementById("limbsUsed"),
         ringMods: document.getElementById("ringModsDiv"),
+        dustPsNorm: document.getElementById("dustPsNorm"),
+        shardsPsNorm: document.getElementById("shardsPsNorm"),
     };
 }
 
@@ -107,8 +109,12 @@ const wrapup = () => {
     elements.clearingTime.innerHTML = convertTime(clearingTime);
     elements.dustPs.innerHTML = toScientific(base_dust) + " D/s";
 
+    let normFactor = AB.lootAvg.normalized / AB.lootAvg.accumulator;
+    elements.dustPsNorm.innerHTML = toScientific(base_dust * normFactor) + " D/s";
+
     let base_shards = AB.enemyLevel >= 51 ? base_dust / 1e9 : 0;
     elements.shardsPs.innerHTML = toScientific(base_shards) + " S/s";
+    elements.shardsPsNorm.innerHTML = toScientific(base_shards * normFactor) + " D/s";
 
     let fightTime = timeSpent / (enemiesKilled + trimpsKilled);
     elements.averageFightTime.innerHTML = convertTimeMs(fightTime, 2);

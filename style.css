@@ -185,3 +185,7 @@ body {
 #bestUpgradesMessage {
   display: block;
 }
+
+#dustPsNorm, #shardsPsNorm {
+  font-weight: bold;
+}
