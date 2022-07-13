@@ -114,7 +114,7 @@ const wrapup = () => {
 
     let base_shards = AB.enemyLevel >= 51 ? base_dust / 1e9 : 0;
     elements.shardsPs.innerHTML = toScientific(base_shards) + " S/s";
-    elements.shardsPsNorm.innerHTML = toScientific(base_shards * normFactor) + " D/s";
+    elements.shardsPsNorm.innerHTML = toScientific(base_shards * normFactor) + " S/s";
 
     let fightTime = timeSpent / (enemiesKilled + trimpsKilled);
     elements.averageFightTime.innerHTML = convertTimeMs(fightTime, 2);
