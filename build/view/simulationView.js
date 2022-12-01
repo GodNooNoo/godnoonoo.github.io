@@ -3,7 +3,7 @@ Simulation view panel, used for importing saves and starting the simulation.
 This file should not interact directly with the data layer.
 */
 import { buildFromSave, loadPreset } from "../controller/buildController.js";
-import { clear, stringPaste } from "../controller/importController.js";
+import { clear, stringPaste, importFromSheet } from "../controller/importController.js";
 import { clickingAnimation, convertMilliSecondsToTime, getHTMLElement, prettyNumber, round, updateButton, } from "../utility.js";
 import { getEnemyLevel, setRuntime, startSimulationFromButton, stopSimulation, updateAutoRun, } from "../controller/autoBattleController.js";
 export function simulationViews() {
@@ -20,6 +20,16 @@ function setupImportBtns() {
     resetBtn.addEventListener("click", () => {
         clear();
         buildFromSave();
+    });
+    const importSheetBtn = getHTMLElement("#sheetImportBtn");
+    clickingAnimation(importSheetBtn);
+    importSheetBtn.addEventListener("click", () => {
+        clear();
+        const SALevel = getHTMLElement("#sheetLevelInp");
+        const BuildRow = getHTMLElement("#buildLineInp");
+        const level = +SALevel.value;
+        const row = +BuildRow.value;
+        importFromSheet(level, row);
     });
 }
 function addImportAction(field) {

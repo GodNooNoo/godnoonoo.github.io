@@ -4,7 +4,7 @@ This file should not interact directly with the data layer.
 */
 
 import { buildFromSave, loadPreset } from "../controller/buildController.js";
-import { clear, stringPaste } from "../controller/importController.js";
+import { clear, stringPaste, importFromSheet } from "../controller/importController.js";
 import {
     clickingAnimation,
     convertMilliSecondsToTime,
@@ -40,6 +40,23 @@ function setupImportBtns() {
         clear();
         buildFromSave();
     });
+
+    const importSheetBtn = getHTMLElement("#sheetImportBtn") as HTMLButtonElement;
+    clickingAnimation(importSheetBtn);
+
+    importSheetBtn.addEventListener("click", () => {
+        clear();
+        const SALevel = getHTMLElement(
+            "#sheetLevelInp"
+        ) as HTMLInputElement;
+        const BuildRow = getHTMLElement(
+            "#buildLineInp"
+        ) as HTMLInputElement;
+        const level = +SALevel.value;
+        const row = +BuildRow.value;
+        importFromSheet(level, row);
+    });
+
 }
 
 function addImportAction(field: HTMLInputElement) {

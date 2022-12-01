@@ -2,8 +2,8 @@ import { Build } from "../data/buildTypes.js";
 import { LZString } from "./lz-string.js";
 import { buildFromSave, buildItems, clearBuilderData, setPresets, } from "./buildController.js";
 import { clearItems, getItems } from "./itemsController.js";
-import { clearBonuses, setBonuses } from "./bonusesController.js";
-import { enemyCount, modifiedAutoBattleWithBuild, } from "./autoBattleController.js";
+import { clearBonuses, setBonuses, equipOneTimer } from "./bonusesController.js";
+import { enemyCount, modifiedAutoBattleWithBuild } from "./autoBattleController.js";
 import { setSaveData } from "./saveController.js";
 export function stringPaste(paste) {
     clear();
@@ -69,12 +69,86 @@ function importSpreadsheet(row) {
     const itemLevels = row.split("\t");
     itemLevels.forEach((itemLevel, index) => {
         if (itemLevel !== "") {
-            const itemName = Object.keys(Build.items)[index];
-            items[itemName].equipped = true;
-            items[itemName].level = parseInt(itemLevel);
+            if (index >= 3 && index <= 43) {
+                const itemName = Object.keys(Build.items)[index];
+                items[itemName].equipped = true;
+                items[itemName].level = parseInt(itemLevel);
+            }
+            else if (index == 44) {
+                equipOneTimer("Master_of_Arms");
+            }
+            else if (index == 45) {
+                equipOneTimer("Dusty_Tome");
+            }
+            else if (index == 46) {
+                equipOneTimer("Whirlwind_of_Arms");
+            }
         }
     });
     buildItems(items);
+}
+export async function importFromSheet(SALevel, BuildRow) {
+    modifiedAutoBattleWithBuild();
+    const baseUrl = "https://script.google.com/macros/s/AKfycbz7HGY5ykmZjUHAZt1jPphbP1E3gCVmBzHkxu8mBo0LPjZH2YMuvB2H09VmSy6XNW2DCg/exec"; // Please set your Web Apps URL.
+    const para = {
+        //spreadsheetId: "11BRCfrb8mYAfn7xo1UdDizMnn9KVGSJtx4KNJNvBOKU",  // read only sheet
+        spreadsheetId: "17Z3dwnkeAmY2La-LWreybTs4Sm7BAck79EzVF_gkZzs",
+        sheetName: SALevel.toString() // Name of page inside google sheet
+    };
+    const q = new URLSearchParams(para);
+    const url = baseUrl + "?" + q;
+    const values = await GetSheetData(url);
+    const items = JSON.parse(JSON.stringify(getItems()));
+    const headerRow = values.values[1];
+    const importRow = values.values[BuildRow - 1]; //Array index from 0, user will enter the row number they see
+    //Last column of base items is either "Master of Arms" find first occurance of either
+    const maxItem = headerRow.findIndex((f) => f.toLowerCase() == "master of arms" || f.toLowerCase() == "ring");
+    //Get all indexes of items that have levels assigned between cel 3 and the last item
+    const indexes = [];
+    for (let i = 2; i < maxItem; i++) {
+        if (importRow[i] != "") {
+            indexes.push(i);
+        }
+    }
+    //Item names are in header row
+    //Item levels are in the import row
+    let itemName = "";
+    indexes.forEach(function (value) {
+        itemName = GetItemName(headerRow[value]);
+        items[itemName].equipped = true;
+        items[itemName].level = parseInt(importRow[value]);
+    });
+    //Load one timers
+    //If SA >= 50 they are not on sheet, but are assumed purchased
+    let oneTimers = [];
+    if (SALevel >= 50) {
+        oneTimers.push("Master_of_Arms");
+        oneTimers.push("Dusty_Tome");
+        oneTimers.push("Whirlwind_of_Arms");
+    }
+    else {
+        if (importRow[headerRow.findIndex((f) => f == "Master Of Arms")] != "") {
+            oneTimers.push("Master_of_Arms");
+        }
+        if (importRow[headerRow.findIndex((f) => f == "Dusty Tome")] != "") {
+            oneTimers.push("Dusty_Tome");
+        }
+        if (importRow[headerRow.findIndex((f) => f == "Whirlwind of Arms")] != "") {
+            oneTimers.push("Whirlwind_of_Arms");
+        }
+    }
+    oneTimers.forEach(ot => equipOneTimer(ot));
+    buildItems(items);
+}
+function GetItemName(ColName) {
+    //Item name in sheet has space, in array has _
+    var re = / /gi;
+    return ColName.replace(re, "_");
+}
+async function GetSheetData(url) {
+    return fetch(url)
+        .then(res => res.json())
+        .then(res => { return res; });
 }
 export function clear() {
     clearItems();
