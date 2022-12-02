@@ -91,19 +91,11 @@ function importSpreadsheet(row) {
 }
 export async function importFromSheet(SALevel, BuildRow) {
     modifiedAutoBattleWithBuild();
-    const baseUrl = "https://script.google.com/macros/s/AKfycbz7HGY5ykmZjUHAZt1jPphbP1E3gCVmBzHkxu8mBo0LPjZH2YMuvB2H09VmSy6XNW2DCg/exec"; // Please set your Web Apps URL.
-    const para = {
-        //spreadsheetId: "11BRCfrb8mYAfn7xo1UdDizMnn9KVGSJtx4KNJNvBOKU",  // read only sheet
-        spreadsheetId: "17Z3dwnkeAmY2La-LWreybTs4Sm7BAck79EzVF_gkZzs",
-        sheetName: SALevel.toString() // Name of page inside google sheet
-    };
-    const q = new URLSearchParams(para);
-    const url = baseUrl + "?" + q;
-    const values = await GetSheetData(url);
+    const values = await GetSheetData(SALevel);
     const items = JSON.parse(JSON.stringify(getItems()));
     const headerRow = values.values[1];
     const importRow = values.values[BuildRow - 1]; //Array index from 0, user will enter the row number they see
-    //Last column of base items is either "Master of Arms" find first occurance of either
+    //Last column of base items is either one before "Master of Arms" or "Ring" find first occurance of either
     const maxItem = headerRow.findIndex((f) => f.toLowerCase() == "master of arms" || f.toLowerCase() == "ring");
     //Get all indexes of items that have levels assigned between cel 3 and the last item
     const indexes = [];
@@ -152,7 +144,19 @@ function GetItemName(ColName) {
     var re = / /gi;
     return ColName.replace(re, "_");
 }
-async function GetSheetData(url) {
+async function GetSheetData(SALevel) {
+    //This is a google webapp/script that queries the sheet data and returns it in JSON
+    //This effectively offloads the oAuth interactions with the sheet that would normally 
+    //   be done via the sheets API to this webapp where it can use default credentials to hit
+    //   public data and can also be called anonymously via a simple fetch
+    const baseUrl = "https://script.google.com/macros/s/AKfycbz7HGY5ykmZjUHAZt1jPphbP1E3gCVmBzHkxu8mBo0LPjZH2YMuvB2H09VmSy6XNW2DCg/exec"; // Please set your Web Apps URL.
+    const para = {
+        //spreadsheetId: "11BRCfrb8mYAfn7xo1UdDizMnn9KVGSJtx4KNJNvBOKU",  // read only sheet
+        spreadsheetId: "17Z3dwnkeAmY2La-LWreybTs4Sm7BAck79EzVF_gkZzs",
+        sheetName: SALevel.toString() // Name of page inside google sheet
+    };
+    const q = new URLSearchParams(para);
+    const url = baseUrl + "?" + q;
     return fetch(url)
         .then(res => res.json())
         .then(res => { return res; });
