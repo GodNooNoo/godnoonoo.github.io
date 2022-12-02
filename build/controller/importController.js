@@ -141,8 +141,8 @@ export async function importFromSheet(SALevel, BuildRow) {
 }
 function GetItemName(ColName) {
     //Item name in sheet has space, in array has _
-    var re = / /gi;
-    return ColName.replace(re, "_");
+    //Snimp-Fanged Blade is Snimp__Fanged_Blade in the item list (sigh)
+    return ColName.replace(/ /gi, "_").replace(/-/gi, "__");
 }
 async function GetSheetData(SALevel) {
     //This is a google webapp/script that queries the sheet data and returns it in JSON
