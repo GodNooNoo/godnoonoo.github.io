@@ -108,7 +108,19 @@ export async function importFromSheet(SALevel: number, BuildRow: number) {
     const values = await GetSheetData(SALevel);
     const items = JSON.parse(JSON.stringify(getItems()));
     
-    const headerRow = values.values[1];
+    //Header is normally row 2, but some sheets in live actually have header row in row 1 because....reasons
+    let headerRow = values.values[1];
+
+    //Check if col2 of header row is "name", if not, check row 1
+    if (headerRow[1].toLowerCase() != "name") {
+        headerRow = values.values[0];
+    }
+
+    if (headerRow[1].toLowerCase() != "name") {
+        //If we still don't have a match just give up because someone probably screwed up the sheet
+        return;
+    }
+
     const importRow = values.values[BuildRow -1]; //Array index from 0, user will enter the row number they see
 
     //Last column of base items is either one before "Master of Arms" or "Ring" find first occurance of either
