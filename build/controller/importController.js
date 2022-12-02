@@ -5,6 +5,8 @@ import { clearItems, getItems } from "./itemsController.js";
 import { clearBonuses, setBonuses, equipOneTimer } from "./bonusesController.js";
 import { enemyCount, modifiedAutoBattleWithBuild } from "./autoBattleController.js";
 import { setSaveData } from "./saveController.js";
+import { setEnemyLevel, setMaxEnemyLevel } from "./levelsController.js";
+import { autoBattle } from "../data/object.js";
 export function stringPaste(paste) {
     clear();
     let savegame;
@@ -139,6 +141,11 @@ export async function importFromSheet(SALevel, BuildRow) {
     }
     oneTimers.forEach(ot => equipOneTimer(ot));
     buildItems(items);
+    setEnemyLevel(SALevel);
+    if (SALevel > autoBattle.maxEnemyLevel) {
+        //Set the max level to at least the level imported
+        setMaxEnemyLevel(SALevel);
+    }
 }
 function GetItemName(ColName) {
     //Item name in sheet has space, in array has _

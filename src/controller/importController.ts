@@ -6,13 +6,15 @@ import {
     clearBuilderData,
     setPresets,
 } from "./buildController.js";
-import { clearItems, getItems, getItemsInOrder } from "./itemsController.js";
+import { clearItems, getItems } from "./itemsController.js";
 import { clearBonuses, setBonuses, equipOneTimer } from "./bonusesController.js";
 import {
     enemyCount,
     modifiedAutoBattleWithBuild
 } from "./autoBattleController.js";
 import { setSaveData } from "./saveController.js";
+import { setEnemyLevel, setMaxEnemyLevel } from "./levelsController.js";
+import { autoBattle } from "../data/object.js";
 
 export function stringPaste(paste: string) {
     clear();
@@ -169,6 +171,12 @@ export async function importFromSheet(SALevel: number, BuildRow: number) {
         );
 
     buildItems(items);
+    
+    setEnemyLevel(SALevel);
+    if (SALevel > autoBattle.maxEnemyLevel) {
+        //Set the max level to at least the level imported
+        setMaxEnemyLevel(SALevel);
+    }
 
 }
 
