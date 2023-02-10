@@ -7,12 +7,14 @@ import {
     setPresets,
 } from "./buildController.js";
 import { clearItems, getItems } from "./itemsController.js";
-import { clearBonuses, setBonuses } from "./bonusesController.js";
+import { clearBonuses, setBonuses, equipOneTimer } from "./bonusesController.js";
 import {
     enemyCount,
-    modifiedAutoBattleWithBuild,
+    modifiedAutoBattleWithBuild
 } from "./autoBattleController.js";
 import { setSaveData } from "./saveController.js";
+import { setEnemyLevel, setMaxEnemyLevel } from "./levelsController.js";
+import { autoBattle } from "../data/object.js";
 
 export function stringPaste(paste: string) {
     clear();
@@ -83,12 +85,128 @@ function importSpreadsheet(row: string) {
     const itemLevels = row.split("\t");
     itemLevels.forEach((itemLevel, index) => {
         if (itemLevel !== "") {
+            if (index >= 3 && index <= 43) {
             const itemName = Object.keys(Build.items)[index];
             items[itemName].equipped = true;
             items[itemName].level = parseInt(itemLevel);
+            } else if (index == 44 ) {
+                equipOneTimer("Master_of_Arms");
+            } else if (index == 45 ) {
+                equipOneTimer("Dusty_Tome");
+            } else if (index == 46 ) {
+                equipOneTimer("Whirlwind_of_Arms");
+            } 
         }
     });
     buildItems(items);
+}
+
+export async function importFromSheet(SALevel: number, BuildRow: number) {
+    
+    modifiedAutoBattleWithBuild();
+    
+    const values = await GetSheetData(SALevel);
+    const items = JSON.parse(JSON.stringify(getItems()));
+    
+    //Header is normally row 2, but some sheets in live actually have header row in row 1 because....reasons
+    let headerRow = values.values[1];
+
+    //Check if col2 of header row is "name", if not, check row 1
+    if (headerRow[1].toLowerCase() != "name") {
+        headerRow = values.values[0];
+    }
+
+    if (headerRow[1].toLowerCase() != "name") {
+        //If we still don't have a match just give up because someone probably screwed up the sheet
+        return;
+    }
+
+    const importRow = values.values[BuildRow -1]; //Array index from 0, user will enter the row number they see
+
+    //Last column of base items is either one before "Master of Arms" or "Ring" find first occurance of either
+    const maxItem = headerRow.findIndex((f: string) => f.toLowerCase() == "master of arms" || f.toLowerCase() == "ring");
+
+    //Get all indexes of items that have levels assigned between cel 3 and the last item
+    const indexes = []
+    for(let i = 2; i < maxItem; i++) 
+    {
+        if (importRow[i] != "")
+        {
+            indexes.push(i);
+        }
+    }
+
+    //Item names are in header row
+    //Item levels are in the import row
+    let itemName = "";
+    indexes.forEach(function (value) {
+        itemName = GetItemName(headerRow[value]);
+        items[itemName].equipped = true;
+        items[itemName].level = parseInt(importRow[value]);
+    });
+
+    //Load one timers
+    //If SA >= 50 they are not on sheet, but are assumed purchased
+
+    let oneTimers : Array<keyof IABTypes["oneTimers"]> = [];
+
+    if (SALevel >= 50) {
+        oneTimers.push("Master_of_Arms");
+        oneTimers.push("Dusty_Tome");
+        oneTimers.push("Whirlwind_of_Arms");
+    } else {
+        if (importRow[headerRow.findIndex((f : string) => f == "Master Of Arms")] != "") {
+            oneTimers.push("Master_of_Arms");
+        }
+
+        if (importRow[headerRow.findIndex((f : string) => f == "Dusty Tome")] != "") {
+            oneTimers.push("Dusty_Tome");
+        }
+
+        if (importRow[headerRow.findIndex((f : string) => f == "Whirlwind of Arms")] != "") {
+            oneTimers.push("Whirlwind_of_Arms");
+        }
+    }
+
+    oneTimers.forEach(ot =>
+        equipOneTimer(ot)
+        );
+
+    buildItems(items);
+
+    setEnemyLevel(SALevel);
+    if (SALevel > autoBattle.maxEnemyLevel) {
+        //Set the max level to at least the level imported
+        setMaxEnemyLevel(SALevel);
+    }
+
+}
+
+function GetItemName(ColName : string) {
+    //Item name in sheet has space, in array has _
+    //Snimp-Fanged Blade is Snimp__Fanged_Blade in the item list (sigh)
+    return ColName.replace(/ /gi, "_").replace(/-/gi,"__");
+}
+
+async function GetSheetData(SALevel : number) {
+
+    //This is a google webapp/script that queries the sheet data and returns it in JSON
+    //This effectively offloads the oAuth interactions with the sheet that would normally 
+    //   be done via the sheets API to this webapp where it can use default credentials to hit
+    //   public data and can also be called anonymously via a simple fetch
+    const baseUrl = "https://script.google.com/macros/s/AKfycbz7HGY5ykmZjUHAZt1jPphbP1E3gCVmBzHkxu8mBo0LPjZH2YMuvB2H09VmSy6XNW2DCg/exec";  // Please set your Web Apps URL.
+    const para = {
+        //spreadsheetId: "11BRCfrb8mYAfn7xo1UdDizMnn9KVGSJtx4KNJNvBOKU",  // read only sheet
+        spreadsheetId: "17Z3dwnkeAmY2La-LWreybTs4Sm7BAck79EzVF_gkZzs", // live sheet
+        sheetName: SALevel.toString()  // Name of page inside google sheet
+    };
+
+    const q = new URLSearchParams(para);
+    const url = baseUrl + "?" + q;
+
+    return fetch(url)
+        .then(res => res.json())
+        .then(res => { return res });
 }
 
 export function clear() {
