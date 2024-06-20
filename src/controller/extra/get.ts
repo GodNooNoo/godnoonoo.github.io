@@ -50,7 +50,9 @@ export function getOppositesLimit(items?: (keyof IABTypes["items"])[]) {
     const allItems = getItemsOwned();
     const opposites = [] as (keyof IABTypes["items"])[];
     for (const item of allItems) {
-        if (!items.includes(item)) opposites.push(item);
+        if (!items.includes(item) && getItem(item).state === Trinary.No) {
+            opposites.push(item);
+        }
     }
     return opposites;
 }
