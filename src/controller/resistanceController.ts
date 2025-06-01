@@ -1,5 +1,5 @@
 /*
-Controller for the resitance and chance info.
+Controller for the resistance and chance info.
 */
 
 import { getEnemyLevel } from "./autoBattleController.js";
@@ -112,6 +112,9 @@ const modifierFunctions = {
             huffy.warningAegis = true;
         }
         huffy.shockMax += chance;
+    },
+    Doppelganger_Diadem() {
+        huffy.canBleed = true;
     },
 };
 
