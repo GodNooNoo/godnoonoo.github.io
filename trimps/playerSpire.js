@@ -253,8 +253,7 @@ var playerSpire = {
             text += "<span class='red'>You cannot afford to load this Trap layout.</span>";
             noLoad = true;
         } else if (layout.length > this.layout.length) {
-            text +=
-                "<span class='red'>You don't have enough Floors available in your Spire to load this layout.</span>";
+            text += "<span class='red'>You don't have enough Floors available in your Spire to load this layout.</span>";
             noLoad = true;
         }
         text +=
@@ -294,9 +293,7 @@ var playerSpire = {
                 buildNiceCheckbox("spirefctPoison", "", this.settings.fctPoison) +
                 "</span>";
         text +=
-            "<span class='spireOption'>Runestones: " +
-            buildNiceCheckbox("spirefctRs", "", this.settings.fctRs) +
-            "</span>";
+            "<span class='spireOption'>Runestones: " + buildNiceCheckbox("spirefctRs", "", this.settings.fctRs) + "</span>";
         text += "<b style='margin-top: 0; margin-bottom: 1vw'>Visual Settings</b>";
         text +=
             "<span class='spireOption'>Trap Icons: " +
@@ -331,7 +328,7 @@ var playerSpire = {
             text,
             "<span class='btn btn-info' onclick='playerSpire.saveSettings()'>Save</span><span class='btn btn-danger' onclick='cancelTooltip()'>Cancel</span>",
             "hi",
-            "hi"
+            "hi",
         );
     },
     saveSettings: function () {
@@ -497,7 +494,7 @@ var playerSpire = {
                 "update",
                 tipText,
                 "playerSpire.buyUpgrade('" + trapName + "', true)",
-                "Upgrade " + trapText + "?"
+                "Upgrade " + trapText + "?",
             );
             return;
         }
@@ -891,8 +888,7 @@ var playerSpire = {
             this.getDifficultyHtml() +
             "</span></div>";
         infoHtml += "<div id='spireTrapsWindow'>";
-        infoHtml +=
-            "<div onclick='playerSpire.shrink()' id='shrinkSpireBox' class='spireControlBox'>Shrink Window</div>";
+        infoHtml += "<div onclick='playerSpire.shrink()' id='shrinkSpireBox' class='spireControlBox'>Shrink Window</div>";
         infoHtml +=
             "<div onclick='playerSpire.settingsTooltip()' id='spireSettingsBox' class='spireControlBox'>Settings</div>";
         infoHtml +=
@@ -963,8 +959,7 @@ var playerSpire = {
         }
         this.nextTrap = cheapestTrap;
         infoHtml += "</div><hr/>"; //spireTrapsWindow
-        infoHtml +=
-            "<span id='playerSpireCloseBtn' class='icomoon icon-close' onclick='playerSpire.closePopup()'></span>";
+        infoHtml += "<span id='playerSpireCloseBtn' class='icomoon icon-close' onclick='playerSpire.closePopup()'></span>";
         infoHtml += "<div id='playerSpireUpgradesArea'>";
         infoHtml += this.getUpgradesHtml();
         if (this.canSeal()) {
@@ -1032,8 +1027,7 @@ var playerSpire = {
         }
         html += "<div id='playerSpireUpgradesArea'>" + this.getUpgradesHtml() + "</div>";
         this.nextTrap = cheapestTrap;
-        html +=
-            "<span id='playerSpireCloseBtnSm' class='icomoon icon-close' onclick='playerSpire.closePopup()'></span>";
+        html += "<span id='playerSpireCloseBtnSm' class='icomoon icon-close' onclick='playerSpire.closePopup()'></span>";
         elem.innerHTML = html;
     },
     resetStats: function () {
@@ -1115,7 +1109,7 @@ var playerSpire = {
                 "Sell Trap/Tower",
                 "customText",
                 event,
-                "Sell a Trap or Tower! You'll get back 100% of what you spent on the last Trap or Tower of that type.<br/><br/>(Hotkey 0 or ')"
+                "Sell a Trap or Tower! You'll get back 100% of what you spent on the last Trap or Tower of that type.<br/><br/>(Hotkey 0 or ')",
             );
             return;
         }
@@ -1124,7 +1118,7 @@ var playerSpire = {
                 "Shift Up",
                 "customText",
                 event,
-                "Shift your Traps and Towers up one cell!<br/><br/>Click this to select Shift Up Mode, then click a Trap or Tower in your Spire. The Trap/Tower you select and all Traps/Towers after it will shift up one cell until the first empty space is hit.<br/><br/>If there is no empty space, your last Trap/Tower will be sold."
+                "Shift your Traps and Towers up one cell!<br/><br/>Click this to select Shift Up Mode, then click a Trap or Tower in your Spire. The Trap/Tower you select and all Traps/Towers after it will shift up one cell until the first empty space is hit.<br/><br/>If there is no empty space, your last Trap/Tower will be sold.",
             );
             return;
         }
@@ -1133,7 +1127,7 @@ var playerSpire = {
                 "Shift Down",
                 "customText",
                 event,
-                "Shift your Traps and Towers down one cell!<br/><br/>Click this to select Shift Down Mode, then click a Trap or Tower in your Spire. The Trap/Tower you select and all Traps/Towers before it will shift down one cell until the first empty space is hit.<br/><br/>If there is no empty space, your first Trap/Tower will be sold."
+                "Shift your Traps and Towers down one cell!<br/><br/>Click this to select Shift Down Mode, then click a Trap or Tower in your Spire. The Trap/Tower you select and all Traps/Towers before it will shift down one cell until the first empty space is hit.<br/><br/>If there is no empty space, your first Trap/Tower will be sold.",
             );
             return;
         }
@@ -1321,8 +1315,7 @@ var playerSpire = {
         if (playerSpireTraps.Poison.level >= 3 && trap.name == "Poison") {
             var dblPoisonCount = 0;
             if (cellNumber > 0 && this.layout[cellNumber - 1].trap.name == "Poison") dblPoisonCount++;
-            if (cellNumber + 1 < this.layout.length && this.layout[cellNumber + 1].trap.name == "Poison")
-                dblPoisonCount++;
+            if (cellNumber + 1 < this.layout.length && this.layout[cellNumber + 1].trap.name == "Poison") dblPoisonCount++;
             var barColor = "#012b13";
             if (dblPoisonCount > 0) {
                 dblPoisonColor = "linear-gradient(" + barColor + " 20%, " + bgColor + " 20%";
@@ -1333,23 +1326,13 @@ var playerSpire = {
             }
         }
         var secondGradient = "";
-        var lightStacks =
-            playerSpireTraps.Lightning.level >= 4 ? this.lightColumns[this.getColFromCell(cellNumber)] : 0;
+        var lightStacks = playerSpireTraps.Lightning.level >= 4 ? this.lightColumns[this.getColFromCell(cellNumber)] : 0;
         if (lightStacks && (trap.name == "Poison" || trap.name == "Fire")) {
             var pct = 100 - lightStacks * 2 + "%";
             secondGradient =
-                "linear-gradient(to right, rgba(0,0,0,0) " +
-                pct +
-                ", " +
-                playerSpireTraps.Lightning.color +
-                " " +
-                pct +
-                ")";
+                "linear-gradient(to right, rgba(0,0,0,0) " + pct + ", " + playerSpireTraps.Lightning.color + " " + pct + ")";
         }
-        if (
-            (!trap.name || trap.name == "Fire") &&
-            this.strengthLocations.indexOf(this.getRowFromCell(cellNumber)) != -1
-        ) {
+        if ((!trap.name || trap.name == "Fire") && this.strengthLocations.indexOf(this.getRowFromCell(cellNumber)) != -1) {
             var setting = trap.name
                 ? "linear-gradient(#7F0505, #630202 75%, #684112 75%)"
                 : "linear-gradient(#000 75%, #684112 75%)";
@@ -1409,8 +1392,7 @@ var playerSpire = {
         if (this.settings.enemyFade) cellClass += " enemyFade";
         if (cell.occupiedBy.slowedFor && this.settings.chillGradient) {
             var pct = cell.occupiedBy.slowedFor * 10;
-            var freezeColor =
-                cell.occupiedBy.slowMod == 1 ? playerSpireTraps.Frost.color : playerSpireTraps.Knowledge.color;
+            var freezeColor = cell.occupiedBy.slowMod == 1 ? playerSpireTraps.Frost.color : playerSpireTraps.Knowledge.color;
             var gradient = freezeColor + " 0%, ";
             var lastPct = 0;
             if (pct > 100) pct = 100;
@@ -1430,8 +1412,8 @@ var playerSpire = {
         var innerText = cell.occupiedBy.dead
             ? "<span class='icomoon icon-skeletor'></span>"
             : this.settings.percentHealth
-            ? prettify((cell.occupiedBy.health / cell.occupiedBy.maxHealth) * 100) + "%"
-            : prettify(cell.occupiedBy.health);
+              ? prettify((cell.occupiedBy.health / cell.occupiedBy.maxHealth) * 100) + "%"
+              : prettify(cell.occupiedBy.health);
         innerText = "<span class='playerSpireEnemyText'>" + innerText + "</span>";
         if (cell.occupiedBy.name && this.settings.enemyIcons) {
             innerText +=
@@ -1509,7 +1491,7 @@ var playerSpire = {
                     playerSpireTraps.Poison.color,
                     -0.05,
                     3.5,
-                    "+ " + prettify(toxReward) + " Rs"
+                    "+ " + prettify(toxReward) + " Rs",
                 );
         }
         this.difficultyHidden -= this.getThreatChange(false, enemy, location);
@@ -1573,8 +1555,7 @@ var playerSpire = {
     },
     getDifficultyHtml: function () {
         var text = (this.smallMode ? "T: " : "Threat: ") + prettify(Math.floor(this.difficulty));
-        var nextCost =
-            this.rowsAllowed < 20 && this.tutorialStep > 1 ? " / " + prettify(100 * (this.rowsAllowed + 1)) : "";
+        var nextCost = this.rowsAllowed < 20 && this.tutorialStep > 1 ? " / " + prettify(100 * (this.rowsAllowed + 1)) : "";
         return text + nextCost;
     },
     updateKills: function () {
@@ -1883,7 +1864,7 @@ var playerSpire = {
                                 playerSpireTraps.Poison.color,
                                 -1.5,
                                 45,
-                                prettify(enemy.toxicity)
+                                prettify(enemy.toxicity),
                             );
                     }
                     if (enemy.health <= 0) {
@@ -2071,16 +2052,14 @@ var playerSpireTraps = {
             return desc;
         },
         totalDamage: function (enemy, cell) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             var level = this.level;
             var dmgs = [50, 500, 2500, 5e3, 10e3, 10e4, 10e5, 10e7, 10e9, 10e11];
             var dmg;
             if (level > dmgs.length) dmg = dmgs[dmgs.length - 1];
             else dmg = dmgs[this.level - 1];
             var row = playerSpire.getRowFromCell(cell);
-            if (playerSpire.strengthLocations.indexOf(row) != -1)
-                dmg = calcHeirloomBonus("Core", "strengthEffect", dmg * 2);
+            if (playerSpire.strengthLocations.indexOf(row) != -1) dmg = calcHeirloomBonus("Core", "strengthEffect", dmg * 2);
             if (playerSpireTraps.Frost.level >= 3 && enemy && enemy.slowedFor && enemy.slowMod == 1) {
                 dmg *= 1.25;
             }
@@ -2155,8 +2134,7 @@ var playerSpireTraps = {
                 " damage when stepped on, and causes the target to become Chilled, slowing movement to 50% speed for " +
                 this.slowTurns() +
                 " moves. This speed reduction causes the target to stay on each Trap for twice as long, triggering each Trap twice. Note that Frost Traps are coated with antifreeze, preventing chill effects from working while an enemy is standing on a Frost Trap.";
-            if (this.level >= 3)
-                desc += "<br/><br/>Enemies chilled by Frost Traps take 25% extra damage from Fire Traps.";
+            if (this.level >= 3) desc += "<br/><br/>Enemies chilled by Frost Traps take 25% extra damage from Fire Traps.";
             if (this.level >= 4)
                 desc += "<br/><br/>Any Poison Traps placed directly before a Frost Trap become 4x as effective.";
             if (this.level >= 5)
@@ -2179,8 +2157,7 @@ var playerSpireTraps = {
             return 5;
         },
         totalDamage: function (enemy) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             var level = this.level;
             var dmgs = [10, 50, 500, 2500, 5000, 25000, 50000, 100000];
             var dmg;
@@ -2191,8 +2168,7 @@ var playerSpireTraps = {
         },
         extraEffect: function (enemy) {
             var slowTurns = this.slowTurns();
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 0;
             if (effect > 0) slowTurns *= effect;
             slowTurns++; //to make up for stuff
             enemy.slowedFor = slowTurns;
@@ -2286,8 +2262,7 @@ var playerSpireTraps = {
             var dmg;
             if (level > dmgs.length) dmg = dmgs[dmgs.length - 1];
             else dmg = dmgs[this.level - 1];
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             if (effect > 0) dmg *= effect;
             if (
                 cell != null &&
@@ -2428,8 +2403,7 @@ var playerSpireTraps = {
             return turns;
         },
         totalDamage: function (enemy) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             var level = this.level;
             var dmgs = [50, 500, 5000, 5000, 5e4, 5e5, 5e5];
             var dmg;
@@ -2478,8 +2452,7 @@ var playerSpireTraps = {
             },
         ],
         totalDamage: function (enemy, cell) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             var row = playerSpire.getRowFromCell(cell);
             var startCell = row * 5;
             var dmg = 0;
@@ -2525,9 +2498,7 @@ var playerSpireTraps = {
             {
                 //level 2
                 get description() {
-                    return (
-                        "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources."
-                    );
+                    return "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources.";
                 }, //500
                 unlockAt: -1,
                 cost: 2e6,
@@ -2535,9 +2506,7 @@ var playerSpireTraps = {
             {
                 //level 3
                 get description() {
-                    return (
-                        "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources."
-                    );
+                    return "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources.";
                 }, //5000
                 unlockAt: -1,
                 cost: 2e10,
@@ -2545,9 +2514,7 @@ var playerSpireTraps = {
             {
                 //level 4
                 get description() {
-                    return (
-                        "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources."
-                    );
+                    return "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources.";
                 }, //50000
                 unlockAt: -1,
                 cost: 2e14,
@@ -2555,9 +2522,7 @@ var playerSpireTraps = {
             {
                 //level 5
                 get description() {
-                    return (
-                        "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources."
-                    );
+                    return "Each Condenser Tower grants an additional 5% " + heliumOrRadon() + " earned from all sources.";
                 }, //500000
                 unlockAt: -1,
                 cost: 2e18,
@@ -2589,8 +2554,7 @@ var playerSpireTraps = {
             );
         },
         extraEffect: function (enemy, cell) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 1;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 1;
             var baseEffect = 0.25;
             baseEffect = calcHeirloomBonus("Core", "condenserEffect", baseEffect);
             var boost = 1 + baseEffect * effect;
@@ -2679,15 +2643,13 @@ var playerSpireTraps = {
         },
         totalDamage: function (enemy) {
             var level = this.level;
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedDamage() : 0;
             var dmg = this.damage + (level - 1) * 10;
             if (effect > 0) dmg *= effect;
             return dmg;
         },
         extraEffect: function (enemy) {
-            var effect =
-                enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 0;
+            var effect = enemy && enemy.shockTurns && enemy.shockTurns > 0 ? playerSpireTraps.Lightning.shockedEffect() : 0;
             if (enemy.slowedFor && enemy.slowMod == 1) {
                 var slowTurns = 5;
                 if (effect) slowTurns *= effect;

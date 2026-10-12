@@ -595,8 +595,7 @@ function newGame() {
                     return prettify(number * 100);
                 },
                 getDamage: function () {
-                    if (getEmpowerment() == "Poison" && getUberEmpowerment() == "Poison")
-                        return this.currentDebuffPower * 2;
+                    if (getEmpowerment() == "Poison" && getUberEmpowerment() == "Poison") return this.currentDebuffPower * 2;
                     return this.currentDebuffPower;
                 },
                 getLevel: function () {
@@ -1304,8 +1303,7 @@ function newGame() {
                 },
                 repeatVoids: {
                     enabled: 0,
-                    description:
-                        "Decide if you want to continue running the rest of your Void Maps after finishing one.",
+                    description: "Decide if you want to continue running the rest of your Void Maps after finishing one.",
                     titles: ["One Void Map", "Finish All Voids"],
                     locked: true,
                     secondLocation: ["togglerepeatVoidsCM"],
@@ -1838,8 +1836,7 @@ function newGame() {
                             }
                             if (isNaN(tx) || tx > 1000 || tx < 1) {
                                 if (times == -2) {
-                                    error +=
-                                        "Preset " + x + " needs a value for Repeat Every X Zones between 1 and 1000.";
+                                    error += "Preset " + x + " needs a value for Repeat Every X Zones between 1 and 1000.";
                                     continue;
                                 }
                             }
@@ -1971,8 +1968,7 @@ function newGame() {
                         var text =
                             "<p>Choose what mode the Dimensional Generator should start each run on. <b>Default Generator</b> will continue with whatever setting you were using at the end of your last run. <b>The rest of the settings<b> are named by what mode will be set to active at the start of each run.</p>";
                         if (game.permanentGeneratorUpgrades.Supervision.owned)
-                            text +=
-                                "<p><b>Hold Ctrl while clicking to open the Generator State Configuration menu.</b></p>";
+                            text += "<p><b>Hold Ctrl while clicking to open the Generator State Configuration menu.</b></p>";
                         return text;
                     },
                     get titles() {
@@ -2485,8 +2481,7 @@ function newGame() {
                 icon: "*hammer2",
             },
             heirloom2: {
-                description:
-                    "You can spend another extra 10% of your Nu on your Heirlooms, bringing the total to 120%.",
+                description: "You can spend another extra 10% of your Nu on your Heirlooms, bringing the total to 120%.",
                 name: "Heirnuum II",
                 tier: 6,
                 purchased: false,
@@ -2683,8 +2678,7 @@ function newGame() {
                 icon: "*water",
             },
             stillRowing2: {
-                description:
-                    "Your Trimps will now gain attack equal to 2x their looting bonus from each Spire row cleared.",
+                description: "Your Trimps will now gain attack equal to 2x their looting bonus from each Spire row cleared.",
                 name: "Still Rowing II",
                 tier: 8,
                 purchased: false,
@@ -2692,8 +2686,7 @@ function newGame() {
                 icon: "align-justify",
             },
             amalg: {
-                description:
-                    "Causes the 50% damage bonus from each Amalgamator to be compounding rather than additive.",
+                description: "Causes the 50% damage bonus from each Amalgamator to be compounding rather than additive.",
                 name: "Amalgagreater",
                 tier: 8,
                 purchased: false,
@@ -2908,9 +2901,7 @@ function newGame() {
                 get description() {
                     var number = game.global.highestRadonLevelCleared >= 49 ? "2/3" : "2";
                     var totalDesc =
-                        game.global.highestRadonLevelCleared >= 49
-                            ? "<span class='icomoon icon-infinity'></span>"
-                            : "2";
+                        game.global.highestRadonLevelCleared >= 49 ? "<span class='icomoon icon-infinity'></span>" : "2";
                     var challengeList = game.global.highestRadonLevelCleared >= 49 ? "Trappapalooza, " : "";
                     challengeList += "Trapper, Coordinate, Trimp, Obliterated or Eradicated";
                     var text =
@@ -2922,8 +2913,7 @@ function newGame() {
                         challengeList +
                         ").</p>";
                     var currentC2 = countChallengeSquaredReward(true);
-                    text +=
-                        "<p>You currently have a C<sup>" + totalDesc + "</sup> bonus of " + prettify(currentC2) + "%.";
+                    text += "<p>You currently have a C<sup>" + totalDesc + "</sup> bonus of " + prettify(currentC2) + "%.";
                     totalDesc = "Challenge<sup>" + totalDesc + "</sup> bonus ";
                     if (this.purchased) {
                         var newVal = countChallengeSquaredReward(true, "noMesmer");
@@ -3628,7 +3618,7 @@ function newGame() {
                             "frenzyPerkStacks",
                             "icomoon " + icon,
                             this.stackTooltip("frenzy"),
-                            false
+                            false,
                         );
                     }
                 },
@@ -3718,8 +3708,7 @@ function newGame() {
                         "Grants your Trimps the ability to locate small Runetrinkets around the World. Purchasing this Perk will grant your Trimps a chance per Zone cleared above Z100 to find a Runetrinket. Each Runetrinket increases your Trimps' attack, health, and gathered primary resources by 1% (additive) per perk level. You can store a maximum of " +
                         this.trinketsPerLevel +
                         " Runetrinkets per perk level, reducing levels in this perk will deactivate any trinkets above cap but not lose them. Runetrinkets persist through Portal and never reset. The chance to find a Runetrinket increases by about 50% per level of this Perk, and scales as the Zone number increases (up to Z200). You'll also find 1 guaranteed Runetrinket every 25 Zones above Z100 for every 2 levels of this perk.";
-                    text +=
-                        "<br/><br/>You have " + prettify(this.trinkets) + " Runetrinket" + needAnS(this.trinkets) + ".";
+                    text += "<br/><br/>You have " + prettify(this.trinkets) + " Runetrinket" + needAnS(this.trinkets) + ".";
                     text +=
                         " You are currently gaining " +
                         formatMultAsPercent(this.getMult(useTemp), true) +
@@ -3776,8 +3765,7 @@ function newGame() {
                     if (useWorld > 201) useWorld = 200;
                     var zones = useWorld - 100;
                     var chance = (1 + (perkLevel - 1) / 2) * Math.pow(1.03, zones);
-                    if (game.global.challengeActive == "Alchemy" && !ignoreAlch)
-                        chance = alchObj.getRunetrinketMult(chance);
+                    if (game.global.challengeActive == "Alchemy" && !ignoreAlch) chance = alchObj.getRunetrinketMult(chance);
                     return chance;
                 },
                 getTrinketCap: function () {
@@ -3797,7 +3785,7 @@ function newGame() {
                         "Loot",
                         "*link4",
                         "runetrinket",
-                        "runetrinket"
+                        "runetrinket",
                     );
                     if (this.trinkets >= 7500) giveSingleAchieve("Heavy Trinker");
                 },
@@ -3912,7 +3900,7 @@ function newGame() {
                     unlockPerk("Range");
                     message(
                         "You have completed the <b>Discipline Challenge!</b> You have unlocked a new perk, and your Trimps have regained their Discipline.",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 allowSquared: true,
@@ -3953,7 +3941,7 @@ function newGame() {
                     game.challenges.Metal.completed = true;
                     message(
                         "You have completed the <b>Metal Challenge!</b> You have unlocked a new perk, and Miners have returned to your game.",
-                        "Notices"
+                        "Notices",
                     );
                 },
 
@@ -3993,7 +3981,7 @@ function newGame() {
                     unlockPerk("Carpentry");
                     message(
                         "You have completed the <b>Size Challenge!</b> You have unlocked a new perk, and your Trimps have been reduced down to their normal size.",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 allowSquared: true,
@@ -4048,7 +4036,7 @@ function newGame() {
                         "You have completed the Balance challenge! You have been rewarded with " +
                             prettify(reward) +
                             " Helium, and you may repeat the challenge.",
-                        "Notices"
+                        "Notices",
                     );
                     game.challenges.Balance.abandon();
                     game.global.challengeActive = "";
@@ -4068,9 +4056,7 @@ function newGame() {
                     var is5 = game.global.highestLevelCleared >= 129 && game.global.sLevel >= 4;
                     return (
                         "Attempt modifying the portal to " +
-                        (is5
-                            ? "retain positive qualities from previous dimensions"
-                            : "harvest resources when travelling") +
+                        (is5 ? "retain positive qualities from previous dimensions" : "harvest resources when travelling") +
                         ". Until you perfect the technique, you will start with <b>_</b> science but will be unable to research or hire scientists" +
                         (is5 ? " and <b style='color: maroon'>all enemy damage will be 10X higher</b>" : "") +
                         ". Choose your upgrades wisely! Clearing <b>'The Block' (11)</b> with this challenge active will cause you to * each time you use your portal."
@@ -4099,7 +4085,7 @@ function newGame() {
                         "You have completed the <b>Scientist Challenge!</b> From now on, you'll " +
                             getScientistInfo(game.global.sLevel, true) +
                             " every time you portal. You've unlocked Scientists, and <b>Don't forget that you can click Research on your Science again!</b>",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 abandon: function () {
@@ -4149,7 +4135,7 @@ function newGame() {
                     unlockPerk("Meditation");
                     message(
                         "You have completed the 'Meditate' challenge! The dimension has returned to normal, and you have unlocked a new perk!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 allowSquared: true,
@@ -4179,7 +4165,7 @@ function newGame() {
                     game.challenges.Decay.abandon();
                     message(
                         "You have completed the Decay challenge! All stats have been returned to normal, and you can now create more powerful Gardens maps at will!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 completeAfterZone: 55,
@@ -4219,7 +4205,7 @@ function newGame() {
                     unlockPerk("Resilience");
                     message(
                         "You have completed the <b>Trimp Challenge!</b> You have unlocked the 'Resilience' perk, and your Trimps can fight together again.",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 unlockString: "reach Zone 60",
@@ -4257,7 +4243,7 @@ function newGame() {
                     unlockPerk("Anticipation");
                     message(
                         "You have completed the 'Trapper' challenge! Your Trimps now remember how to breed, and you have unlocked a new perk!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 unlockString: "reach Zone 70",
@@ -4282,7 +4268,7 @@ function newGame() {
                             "You have completed the Electricity challenge! You have been rewarded with " +
                                 prettify(reward) +
                                 " Helium, and you may repeat the challenge.",
-                            "Notices"
+                            "Notices",
                         );
                     game.challenges.Electricity.heldHelium = 0;
                     game.global.challengeActive = "";
@@ -4323,7 +4309,7 @@ function newGame() {
                     game.challenges.Frugal.abandon();
                     message(
                         "You have completed the 'Frugal' challenge! You can once again find equipment upgrades in maps, and Megabooks now increase gather rates by an extra 10%!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 fireAbandon: true,
@@ -4381,7 +4367,7 @@ function newGame() {
                         "You have completed the Mapocalypse challenge! You have unlocked the 'Siphonology' Perk, and have been rewarded with " +
                             prettify(reward) +
                             " Helium.",
-                        "Notices"
+                        "Notices",
                     );
                     unlockPerk("Siphonology");
                     game.challenges.Mapocalypse.abandon();
@@ -4412,7 +4398,7 @@ function newGame() {
                     unlockPerk("Coordinated");
                     message(
                         "You have completed the 'Coordinate' challenge! The Bad Guys on this world no longer fight together, and have regained their speed. You have unlocked the 'Coordinated' perk!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 unlocks: "Coordinated",
@@ -4437,7 +4423,7 @@ function newGame() {
                         "You have completed the Crushed challenge! You have been rewarded with " +
                             prettify(heliumAdded) +
                             " Helium.",
-                        "Notices"
+                        "Notices",
                     );
                     game.challenges.Crushed.heldHelium = 0;
                     game.global.challengeActive = "";
@@ -4462,7 +4448,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Slow challenge! You have found the patterns for the Gambeson and the Arbalest!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     if (!game.global.slowDone) {
@@ -4508,7 +4494,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Mapology challenge! You have unlocked the 'Resourceful' Perk! Cheaper stuff!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     unlockPerk("Resourceful");
@@ -4548,7 +4534,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Devastation challenge! Your world has been returned to normal, and you have unlocked the Overkill perk!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     unlockPerk("Overkill");
@@ -4737,7 +4723,7 @@ function newGame() {
                             "icomoon icon-feed",
                             this.shatteredTooltip(),
                             false,
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, true, "frigidShatterStacks", null, null, true);
@@ -4751,7 +4737,7 @@ function newGame() {
                             "icomoon icon-fire",
                             this.warmthTooltip(),
                             false,
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, true, "frigidWarmthStacks", null, null, true);
@@ -4811,7 +4797,7 @@ function newGame() {
                                     " Frigid Challenges! You are now gaining a total of +" +
                                     prettify((newAmt - 1) * 100) +
                                     "% to Helium, Damage, Health and Fluffy Experience for your accomplishments.",
-                                "Notices"
+                                "Notices",
                             );
                         } else
                             message(
@@ -4824,7 +4810,7 @@ function newGame() {
                                     ". Your new total Frigid bonus is +" +
                                     prettify((newAmt - 1) * 100) +
                                     "%.",
-                                "Notices"
+                                "Notices",
                             );
                     } else message("You completed Frigid again, just for fun!", "Notices");
                     game.global.challengeActive = "";
@@ -4891,7 +4877,7 @@ function newGame() {
                             " + " +
                             prettify(extraTiers * 50) +
                             "% from extra BW tiers), and your World has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     this.wonders = 0;
                     this.heldExperience = 0;
@@ -4904,8 +4890,7 @@ function newGame() {
                     manageStacks(null, null, true, "experienceWonderStacks", null, null, true);
                 },
                 drawStacks: function () {
-                    var color =
-                        this.nextWonder == 300 ? "Grey" : game.global.world >= this.nextWonder ? "Green" : "Red";
+                    var color = this.nextWonder == 300 ? "Grey" : game.global.world >= this.nextWonder ? "Green" : "Red";
                     manageStacks(
                         "Wonders Experienced",
                         this.wonders,
@@ -4915,7 +4900,7 @@ function newGame() {
                         this.wonderTooltip(),
                         false,
                         false,
-                        "xpColor"
+                        "xpColor",
                     );
                     swapClass("xpColor", "xpColor" + color, document.getElementById("experienceWonderStacks"));
                 },
@@ -5049,7 +5034,7 @@ function newGame() {
                     unlockPerk("Range");
                     message(
                         "You have completed the <b>Unlucky Challenge!</b> You have unlocked a new perk, and your Trimps' damage has normalized.",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 allowU2: true,
@@ -5084,7 +5069,7 @@ function newGame() {
                     unlockPerk("Carpentry");
                     message(
                         "You have completed the <b>Downsize Challenge!</b> You have unlocked a new perk, and your Trimps are once again willing to share houses.",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 allowU2: true,
@@ -5120,7 +5105,7 @@ function newGame() {
                     game.challenges.Transmute.completed = true;
                     message(
                         "You have completed the <b>Transmute Challenge!</b> You have unlocked a new perk, and Miners have returned to your game.",
-                        "Notices"
+                        "Notices",
                     );
                     var jobCount = 0;
                     for (var job in game.jobs) jobCount += game.jobs[job].owned; //Dragimp adds 1
@@ -5185,10 +5170,7 @@ function newGame() {
                 },
                 onComplete: function () {
                     if (this.balanceStacks >= 500) giveSingleAchieve("Upsized");
-                    message(
-                        "You have completed the Unbalance challenge! You have unlocked the Equality Perk!",
-                        "Notices"
-                    );
+                    message("You have completed the Unbalance challenge! You have unlocked the Equality Perk!", "Notices");
                     game.challenges.Unbalance.abandon();
                     game.global.challengeActive = "";
                     unlockPerk("Equality");
@@ -5221,17 +5203,13 @@ function newGame() {
                         "Oh no, you failed the Bublé challenge! You have been rewarded with " +
                             prettify(reward) +
                             " extra Radon, and you may try again.",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     addHelium(reward);
                 },
                 onComplete: function () {
-                    if (
-                        game.global.canRespecPerks &&
-                        !game.global.bonePortalThisRun &&
-                        game.portal.Prismal.radLevel == 0
-                    )
+                    if (game.global.canRespecPerks && !game.global.bonePortalThisRun && game.portal.Prismal.radLevel == 0)
                         giveSingleAchieve("Unpoppable");
                     var reward = game.challenges.Bublé.heldHelium;
                     reward *= 5;
@@ -5239,7 +5217,7 @@ function newGame() {
                         "You have completed the Bublé challenge! You're a hero among Trimps! You have been rewarded with " +
                             prettify(reward) +
                             " extra Radon, and you may repeat the challenge.",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     addHelium(reward);
@@ -5274,7 +5252,7 @@ function newGame() {
                         "trimpDuelPoints",
                         "icomoon icon-abacus",
                         this.stackTooltip(true),
-                        false
+                        false,
                     );
                     manageStacks(
                         "Duel Points",
@@ -5283,7 +5261,7 @@ function newGame() {
                         "enemyDuelPoints",
                         "icomoon icon-abacus",
                         this.stackTooltip(false),
-                        false
+                        false,
                     );
                 },
                 stackTooltip: function (isTrimp) {
@@ -5308,10 +5286,7 @@ function newGame() {
                 },
                 onComplete: function () {
                     if (this.lowestTrimpStacks >= 20) giveSingleAchieve("Pwnd");
-                    message(
-                        "You have completed the Duel challenge! You have unlocked the Criticality Perk!",
-                        "Notices"
-                    );
+                    message("You have completed the Duel challenge! You have unlocked the Criticality Perk!", "Notices");
                     game.challenges.Duel.abandon();
                     game.global.challengeActive = "";
                     unlockPerk("Criticality");
@@ -5351,7 +5326,7 @@ function newGame() {
                         "You have completed the Melt challenge! You have been rewarded with " +
                             prettify(reward) +
                             " Radon, and you may repeat the challenge.",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     game.challenges.Melt.abandon();
@@ -5400,7 +5375,7 @@ function newGame() {
                     unlockPerk("Resilience");
                     message(
                         "You have completed the 'Trappapalooza' challenge! Your Trimps now remember how to breed, and you have unlocked a new perk!",
-                        "Notices"
+                        "Notices",
                     );
                 },
                 unlockString: "reach Zone 60",
@@ -5433,7 +5408,7 @@ function newGame() {
                         "You have completed the Quagmire challenge! You have gained an extra " +
                             prettify(reward) +
                             " Radon, and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     addHelium(reward);
                     game.challenges.Quagmire.abandon();
@@ -5446,7 +5421,7 @@ function newGame() {
                         "quagmireMotivatedStacks",
                         "glyphicon glyphicon-gift iconPadLeft",
                         this.stackTooltip("Motivated"),
-                        false
+                        false,
                     );
                     manageStacks(
                         "Exhausted",
@@ -5455,7 +5430,7 @@ function newGame() {
                         "quagmireExhaustedStacks",
                         "glyphicon glyphicon-bed iconPadLeft",
                         this.stackTooltip("Exhausted"),
-                        false
+                        false,
                     );
                 },
                 onLoad: function () {
@@ -5555,7 +5530,7 @@ function newGame() {
                     if (this.trimpStacks >= 10000) giveSingleAchieve("Witherproof");
                     message(
                         "You have completed the Wither challenge! Your world has been returned to normal, and you have unlocked the Tenacity perk!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     unlockPerk("Tenacity");
@@ -5605,7 +5580,7 @@ function newGame() {
                         "witherHardenedStacks",
                         "glyphicon glyphicon-heart",
                         this.stackTooltip(true),
-                        false
+                        false,
                     );
                     manageStacks(
                         "Horror",
@@ -5614,7 +5589,7 @@ function newGame() {
                         "witherHorrorStacks",
                         "glyphicon glyphicon-screenshot",
                         this.stackTooltip(false),
-                        false
+                        false,
                     );
                     if (this.healImmunity > 0)
                         manageStacks(
@@ -5623,7 +5598,7 @@ function newGame() {
                             true,
                             "witherImmunityStacks",
                             "icomoon icon-plus",
-                            "Enemies cannot heal or inflict Wither while your Trimps have Wither Immunity."
+                            "Enemies cannot heal or inflict Wither while your Trimps have Wither Immunity.",
                         );
                     else manageStacks(null, null, true, "witherImmunityStacks", null, null, true);
                 },
@@ -5672,7 +5647,7 @@ function newGame() {
                     if (this.stacks == 19) giveSingleAchieve("Close Call");
                     message(
                         "You have completed the Revenge challenge! Your world has been returned to normal, and you have unlocked the Hunger perk!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     this.abandon();
@@ -5701,7 +5676,7 @@ function newGame() {
                         "revengeChallengeStacks",
                         "icomoon icon-bomb",
                         this.stackTooltip(true),
-                        false
+                        false,
                     );
                 },
                 onLoad: function () {
@@ -5834,7 +5809,7 @@ function newGame() {
                             " quests.",
                         "Notices",
                         "*question2",
-                        "questMessage questSuccess"
+                        "questMessage questSuccess",
                     );
                 },
                 failQuest: function () {
@@ -5846,7 +5821,7 @@ function newGame() {
                             " quests.",
                         "Notices",
                         "*exclamation",
-                        "questMessage questFail"
+                        "questMessage questFail",
                     );
                 },
                 disableOverkill: function () {
@@ -5893,7 +5868,7 @@ function newGame() {
                         "You have a new quest! <b>" + this.getQuestDescription() + "</b>. Good luck!",
                         "Notices",
                         "*exclamation",
-                        "questMessage questNew"
+                        "questMessage questNew",
                     );
                 },
                 getQuestDescription: function (addProgress) {
@@ -5917,7 +5892,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Quest challenge! Your World has been returned to normal and you have unlocked the Greed Perk!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     unlockPerk("Greed");
@@ -6114,8 +6089,7 @@ function newGame() {
                             cap +
                             ".";
                     }
-                    text +=
-                        "<br/><br/><b>Hold Ctrl while clicking any relic upgrade to access the Relic Automator!</b>";
+                    text += "<br/><br/><b>Hold Ctrl while clicking any relic upgrade to access the Relic Automator!</b>";
                     text +=
                         "<br/><br/>You have discovered " +
                         (this.getPoints(what) + game.global.world - 1) +
@@ -6166,21 +6140,18 @@ function newGame() {
                         "You have completed the Archaeology Challenge! You have gained an extra " +
                             prettify(reward) +
                             " Radon, and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     addHelium(reward);
                     if (game.global.ArchaeologyDone && !game.global.canGuString) {
                         game.global.canGuString = true;
                         message(
                             "Now that you've mastered the skill of Archaeology, you've gained the ability to use a more powerful Custom Golden Upgrade automator! See the AutoGold tooltip or Ctrl Click AutoGold for more info.",
-                            "Notices"
+                            "Notices",
                         );
                     }
                     if (!game.global.ArchaeologyDone) {
-                        message(
-                            "You've gained the ability to create Small and Large Research Caches in Maps!",
-                            "Notices"
-                        );
+                        message("You've gained the ability to create Small and Large Research Caches in Maps!", "Notices");
                         game.global.ArchaeologyDone = true;
                     }
                     game.challenges.Archaeology.abandon();
@@ -6284,7 +6255,7 @@ function newGame() {
                         "mayhemChallengeStacks",
                         "icomoon icon-bomb",
                         this.stackTooltip(),
-                        false
+                        false,
                     );
                     if (this.poison > 0) {
                         manageStacks(
@@ -6294,7 +6265,7 @@ function newGame() {
                             "mayhemPoisonStacks",
                             "icomoon icon-flask",
                             this.poisonTooltip(),
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, true, "mayhemPoisonStacks", null, null, true);
@@ -6334,7 +6305,7 @@ function newGame() {
                                 ". Your new total Mayhem bonus is +" +
                                 prettify((newAmt - 1) * 100) +
                                 "%",
-                            "Notices"
+                            "Notices",
                         );
                     } else message("You completed Mayhem again, just for fun!", "Notices");
                     if (game.global.mayhemCompletions >= 25) giveSingleAchieve("Peace");
@@ -6401,7 +6372,7 @@ function newGame() {
                         "stormAlphaStacks",
                         "icomoon icon-bolt",
                         this.stackTooltip("alpha"),
-                        false
+                        false,
                     );
                     if (this.beta > 0) {
                         manageStacks(
@@ -6411,7 +6382,7 @@ function newGame() {
                             "stormBetaStacks",
                             "icomoon icon-cloudy2",
                             this.stackTooltip("beta"),
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, false, "stormBetaStacks", null, null, true);
@@ -6424,7 +6395,7 @@ function newGame() {
                             "stormMutationStacks",
                             "icomoon icon-lightning",
                             this.stackTooltip("mutations"),
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, false, "stormMutationStacks", null, null, true);
@@ -6541,7 +6512,7 @@ function newGame() {
                         "insanityStacks",
                         "icomoon icon-grin",
                         this.stackTooltip(),
-                        false
+                        false,
                     );
                 },
                 stackTooltip: function (type) {
@@ -6615,7 +6586,7 @@ function newGame() {
                         "You have completed the Insanity challenge! You have gained an extra " +
                             prettify(reward) +
                             " Radon, and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     addHelium(reward);
                     game.challenges.Insanity.abandon();
@@ -6651,10 +6622,10 @@ function newGame() {
                         this.weakened < 7
                             ? "icon-battery2"
                             : this.weakened < 14
-                            ? "icon-battery3"
-                            : this.weakened < 19
-                            ? "icon-battery4"
-                            : "icon-battery5";
+                              ? "icon-battery3"
+                              : this.weakened < 19
+                                ? "icon-battery4"
+                                : "icon-battery5";
                     manageStacks(
                         "Weakened",
                         this.weakened,
@@ -6662,14 +6633,14 @@ function newGame() {
                         "weakenedStacks",
                         "icomoon " + weakenedIcon,
                         this.stackTooltip("weakened"),
-                        false
+                        false,
                     );
                     var frenzyIcon =
                         this.frenzyStacks < 1
                             ? "icon-star-empty"
                             : this.frenzyStacks < 25
-                            ? "icon-star-half"
-                            : "icon-star-full";
+                              ? "icon-star-half"
+                              : "icon-star-full";
                     manageStacks(
                         "Frenzied",
                         this.frenzyStacks,
@@ -6677,7 +6648,7 @@ function newGame() {
                         "frenzyStacks",
                         "icomoon " + frenzyIcon,
                         this.stackTooltip("frenzy"),
-                        false
+                        false,
                     );
                 },
                 stackTooltip: function (type) {
@@ -6768,7 +6739,7 @@ function newGame() {
                     unlockPerk("Frenzy");
                     message(
                         "You have completed the Berserk challenge! You have unlocked the Frenzy Perk and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     game.challenges.Berserk.abandon();
                     game.global.challengeActive = "";
@@ -6802,7 +6773,7 @@ function newGame() {
                             "experiencedStacks",
                             "icomoon icon-graduate",
                             this.stackTooltip("experienced"),
-                            false
+                            false,
                         );
                     else manageStacks(null, null, true, "experiencedStacks", null, null, true);
                     if (this.swarmStacks > 0)
@@ -6813,7 +6784,7 @@ function newGame() {
                             "swarmStacks",
                             "icomoon icon-bug",
                             this.stackTooltip("swarm"),
-                            false
+                            false,
                         );
                     else manageStacks(null, null, true, "swarmStacks", null, null, true);
                 },
@@ -6859,7 +6830,7 @@ function newGame() {
                     unlockBuilding("Hub");
                     message(
                         "You have completed the Exterminate Challenge! You have unlocked the Hub, a revolutionary new way to store your extra Trimps!",
-                        "Notices"
+                        "Notices",
                     );
                     game.challenges.Exterminate.abandon();
                     game.global.challengeActive = "";
@@ -6882,18 +6853,7 @@ function newGame() {
                 completeAfterZone: 135,
                 unlockString: " reach Zone 130.",
                 fireAbandon: true,
-                rewardsList: [
-                    "cruf1",
-                    "cruf2",
-                    "cruf3",
-                    "cruf4",
-                    "cruf5",
-                    "cruf6",
-                    "cruf7",
-                    "cruf8",
-                    "cruf9",
-                    "cruf10",
-                ],
+                rewardsList: ["cruf1", "cruf2", "cruf3", "cruf4", "cruf5", "cruf6", "cruf7", "cruf8", "cruf9", "cruf10"],
                 totalXp: 0,
                 firstLevelXp: 300000,
                 growth: 2.5,
@@ -6962,12 +6922,10 @@ function newGame() {
                     var experience = this.totalXp;
                     var removeExp = 0;
                     if (level > 0) {
-                        removeExp = Math.floor(
-                            this.firstLevelXp * ((Math.pow(this.growth, level) - 1) / (this.growth - 1))
-                        );
+                        removeExp = Math.floor(this.firstLevelXp * ((Math.pow(this.growth, level) - 1) / (this.growth - 1)));
                     }
                     var totalNeeded = Math.floor(
-                        this.firstLevelXp * ((Math.pow(this.growth, level + 1) - 1) / (this.growth - 1))
+                        this.firstLevelXp * ((Math.pow(this.growth, level + 1) - 1) / (this.growth - 1)),
                     );
                     totalNeeded -= removeExp;
                     experience -= removeExp;
@@ -6981,7 +6939,7 @@ function newGame() {
                 },
                 calculateLevel: function () {
                     this.level = Math.floor(
-                        log10((this.totalXp / this.firstLevelXp) * (this.growth - 1) + 1) / log10(this.growth)
+                        log10((this.totalXp / this.firstLevelXp) * (this.growth - 1) + 1) / log10(this.growth),
                     );
                     if (this.level > 19) this.level = 19;
                 },
@@ -7006,7 +6964,7 @@ function newGame() {
                         "You have completed the Nurture challenge! You have gained an extra " +
                             prettify(reward) +
                             " Radon, and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     addHelium(reward);
                     game.challenges.Nurture.abandon();
@@ -7178,8 +7136,7 @@ function newGame() {
                     var cell = game.global.gridArray[game.global.lastClearedCell + 1];
                     if (cell.health < 0) return;
                     if (cell.preMayhemHealth) {
-                        if (game.global.lastClearedCell == 98)
-                            cell.maxHealth = cell.preMayhemHealth * this.getBossMult();
+                        if (game.global.lastClearedCell == 98) cell.maxHealth = cell.preMayhemHealth * this.getBossMult();
                         else cell.maxHealth = cell.preMayhemHealth * this.getPandMult();
                     }
                     if (cell.maxHealth != -1 && cell.health > cell.maxHealth) cell.health = cell.maxHealth;
@@ -7197,7 +7154,7 @@ function newGame() {
                         "pandOrderStacks",
                         "icomoon icon-yingyang",
                         this.orderTooltip(),
-                        false
+                        false,
                     );
                     if (this.pandemonium > 0) {
                         manageStacks(
@@ -7207,7 +7164,7 @@ function newGame() {
                             "pandPandStacks",
                             "icomoon icon-network",
                             this.pandTooltip(),
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, false, "pandPandStacks", null, null, true);
@@ -7264,7 +7221,7 @@ function newGame() {
                                 ". Your new total Pandemonium bonus is +" +
                                 prettify((newAmt - 1) * 100) +
                                 "%",
-                            "Notices"
+                            "Notices",
                         );
                     } else message("You completed Pandemonium again, just for fun!", "Notices");
                     game.global.challengeActive = "";
@@ -7310,13 +7267,13 @@ function newGame() {
                         "You have completed the Alchemy challenge! You have gained an extra " +
                             prettify(reward) +
                             " Radon, and your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     if (!game.global.farmlandsUnlocked) {
                         game.global.farmlandsUnlocked = true;
                         message(
                             "You have unlocked the ability to create Farmlands Maps! Farmlands Maps have +100% Loot in Universe 2 and rotate between the other map types based on the zone at which they're run. See the Map Creation biome selection tooltip for more info!",
-                            "Notices"
+                            "Notices",
                         );
                     }
                     addHelium(reward);
@@ -7362,7 +7319,7 @@ function newGame() {
                 onFail: function () {
                     message(
                         "You completed Z200 without completing Frozen Castle, and have failed Hypothermia! Your world has been returned to normal.",
-                        "Notices"
+                        "Notices",
                     );
                     game.challenges.Hypothermia.abandon();
                     game.global.challengeActive = "";
@@ -7375,7 +7332,7 @@ function newGame() {
                             "You have completed your first Hypothermia challenge! You have gained an extra " +
                                 prettify(reward) +
                                 " Radon, unlocked the Masterfulness Perk, and your world has been returned to normal!",
-                            "Notices"
+                            "Notices",
                         );
                         game.portal.Masterfulness.radLocked = false;
                     } else
@@ -7383,7 +7340,7 @@ function newGame() {
                             "You have completed the Hypothermia challenge! You have gained an extra " +
                                 prettify(reward) +
                                 " Radon, and your world has been returned to normal.",
-                            "Notices"
+                            "Notices",
                         );
                     addHelium(reward);
                     game.challenges.Hypothermia.abandon();
@@ -7398,7 +7355,7 @@ function newGame() {
                         "hypoBonfireStacks",
                         "icomoon icon-fire",
                         this.bonfireTooltip(),
-                        false
+                        false,
                     );
                     manageStacks(
                         "Embers",
@@ -7407,7 +7364,7 @@ function newGame() {
                         "hypoEmberStacks",
                         "icomoon icon-fire2",
                         this.emberTooltip(),
-                        false
+                        false,
                     );
                 },
                 getBonfireLength: function () {
@@ -7529,7 +7486,7 @@ function newGame() {
                             abandonChallenge();
                             message(
                                 "You hit 10 Crystallized stacks and have failed the Glass Challenge! Your World has been returned to normal.",
-                                "Notices"
+                                "Notices",
                             );
                             return;
                         }
@@ -7556,7 +7513,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Glass Challenge! Your World has been returned to normal, and from now on every Zone above Z175 will grant an extra 10% compounding Radon per Zone!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     this.abandon();
@@ -7589,7 +7546,7 @@ function newGame() {
                         "icomoon icon-tint",
                         this.shardTooltip(),
                         false,
-                        true
+                        true,
                     );
                     manageStacks(
                         "Crystallized",
@@ -7598,7 +7555,7 @@ function newGame() {
                         "glassCrystalStacks",
                         "icomoon icon-glass3",
                         this.crystalTooltip(),
-                        false
+                        false,
                     );
                 },
                 attackMult: function () {
@@ -7692,7 +7649,7 @@ function newGame() {
                 onComplete: function () {
                     message(
                         "You have completed the Smithless Challenge! Your World has been returned to normal and you have unlocked the Smithology Perk!",
-                        "Notices"
+                        "Notices",
                     );
                     game.global.challengeActive = "";
                     unlockPerk("Smithology");
@@ -7730,7 +7687,7 @@ function newGame() {
                             "icomoon icon-resize3",
                             this.armorTooltip(),
                             false,
-                            true
+                            true,
                         );
                     if (
                         !hideSmith &&
@@ -7748,7 +7705,7 @@ function newGame() {
                             "icomoon icon-hammer",
                             this.ubersmithTooltip(),
                             false,
-                            true
+                            true,
                         );
                     } else manageStacks(null, null, false, "ubersmithStacks", null, null, true);
                 },
@@ -7780,7 +7737,7 @@ function newGame() {
                             " total stack" +
                             needAnS(this.fakeSmithies) +
                             ".",
-                        "Notices"
+                        "Notices",
                     );
                     this.drawStacks(true);
                 },
@@ -7868,10 +7825,7 @@ function newGame() {
                     return this.desolationMult();
                 },
                 onNextWorld: function () {
-                    this.updateHealth(
-                        this.desolationMult(game.global.world - 1),
-                        this.desolationMult(game.global.world)
-                    );
+                    this.updateHealth(this.desolationMult(game.global.world - 1), this.desolationMult(game.global.world));
                     this.drawStacks();
                 },
                 clearedMap: function (level) {
@@ -7904,7 +7858,7 @@ function newGame() {
                             "desoChilledStacks",
                             "icomoon icon-snow",
                             this.chilledTooltip(),
-                            false
+                            false,
                         );
                     } else {
                         manageStacks(null, null, true, "desoChilledStacks", null, null, true);
@@ -7941,7 +7895,7 @@ function newGame() {
                                 ". Your new total Desolation bonus is +" +
                                 prettify((newAmt - 1) * 100) +
                                 "%",
-                            "Notices"
+                            "Notices",
                         );
                     } else message("You completed Desolation again, just for fun!", "Notices");
                     game.global.challengeActive = "";
@@ -8616,8 +8570,7 @@ function newGame() {
                 description: function () {
                     var requires =
                         "<p class='" +
-                        (game.permanentGeneratorUpgrades.Hybridization.owned &&
-                        game.permanentGeneratorUpgrades.Storage.owned
+                        (game.permanentGeneratorUpgrades.Hybridization.owned && game.permanentGeneratorUpgrades.Storage.owned
                             ? "green"
                             : "red") +
                         "'>Requires Hybridization and Storage.</p>";
@@ -8696,13 +8649,13 @@ function newGame() {
                     return game.global.highestLevelCleared;
                 },
                 breakpoints: [
-                    2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
-                    210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 325, 350, 375, 400, 425, 450, 475, 500, 525, 550,
-                    600, 650, 700, 750, 800, 809,
+                    2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210,
+                    220, 230, 240, 250, 260, 270, 280, 290, 300, 325, 350, 375, 400, 425, 450, 475, 500, 525, 550, 600, 650,
+                    700, 750, 800, 809,
                 ],
                 tiers: [
-                    1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 8,
-                    8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 10, 11, 12,
+                    1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8,
+                    8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 10, 11, 12,
                 ],
                 names: [
                     "This is Easy",
@@ -8775,12 +8728,12 @@ function newGame() {
                     return game.global.highestRadonLevelCleared;
                 },
                 breakpoints: [
-                    2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
-                    225, 250, 275, 300, 325, 350, 375, 400,
+                    2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 225,
+                    250, 275, 300, 325, 350, 375, 400,
                 ],
                 tiers: [
-                    9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14,
-                    14, 14, 14, 14, 14,
+                    9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14,
+                    14, 14, 14,
                 ],
                 names: [
                     "This is Harder",
@@ -8862,8 +8815,7 @@ function newGame() {
                     return "Highest is " + prettify(Math.floor(this.highest));
                 },
                 breakpoints: [
-                    50, 150, 300, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000,
-                    100000000000,
+                    50, 150, 300, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000,
                 ],
                 tiers: [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4],
                 names: [
@@ -9251,8 +9203,7 @@ function newGame() {
                     if (!this.earnable && this.lastZone == -1) return "You need to portal to become eligible";
                     if (!this.earnable) return "You lost more than once on Z" + this.lastZone;
                     if (game.stats.battlesLost.value > this.lastZone + 1) return "You lost too many fights!";
-                    if (game.stats.battlesLost.value == this.lastZone + 1)
-                        return "You've lost once this Zone, be careful!";
+                    if (game.stats.battlesLost.value == this.lastZone + 1) return "You've lost once this Zone, be careful!";
                     return "Still Earnable!";
                 },
                 earnable: true,
@@ -9435,9 +9386,7 @@ function newGame() {
                     return "Clear The Wall in less than " + number + " from start of run";
                 },
                 display: function () {
-                    return (
-                        game.global.highestLevelCleared >= 10 && (game.global.totalPortals >= 1 || this.finished >= 1)
-                    );
+                    return game.global.highestLevelCleared >= 10 && (game.global.totalPortals >= 1 || this.finished >= 1);
                 },
                 evaluate: function () {
                     return getMinutesThisPortal();
@@ -9464,9 +9413,7 @@ function newGame() {
                     return "Clear DoA in less than " + number + " from start of run";
                 },
                 display: function () {
-                    return (
-                        game.global.highestLevelCleared >= 14 && (game.global.totalPortals >= 1 || this.finished >= 1)
-                    );
+                    return game.global.highestLevelCleared >= 14 && (game.global.totalPortals >= 1 || this.finished >= 1);
                 },
                 evaluate: function () {
                     return getMinutesThisPortal();
@@ -9493,9 +9440,7 @@ function newGame() {
                     return "Clear ToD in less than " + number + " from start of run";
                 },
                 display: function () {
-                    return (
-                        game.global.highestLevelCleared >= 19 && (game.global.totalPortals >= 1 || this.finished >= 1)
-                    );
+                    return game.global.highestLevelCleared >= 19 && (game.global.totalPortals >= 1 || this.finished >= 1);
                 },
                 evaluate: function () {
                     return getMinutesThisPortal();
@@ -9522,9 +9467,7 @@ function newGame() {
                     return "Clear Prison in less than " + number + " from start of run";
                 },
                 display: function () {
-                    return (
-                        game.global.highestLevelCleared >= 32 && (game.global.totalPortals >= 1 || this.finished >= 1)
-                    );
+                    return game.global.highestLevelCleared >= 32 && (game.global.totalPortals >= 1 || this.finished >= 1);
                 },
                 evaluate: function () {
                     return getMinutesThisPortal();
@@ -9636,9 +9579,7 @@ function newGame() {
                 description: function (number) {
                     number = formatMinutesForDescriptions(this.breakpoints[number]);
                     return (
-                        "<span style='font-size: .8em'>Clear the Spire in less than " +
-                        number +
-                        " from start of run</span>"
+                        "<span style='font-size: .8em'>Clear the Spire in less than " + number + " from start of run</span>"
                     );
                 },
                 display: function () {
@@ -9893,9 +9834,7 @@ function newGame() {
                 description: function (number) {
                     number = formatMinutesForDescriptions(this.breakpoints[number]);
                     return (
-                        "<span style='font-size: .8em'>Clear Big Wall in less than " +
-                        number +
-                        " from start of run</span>"
+                        "<span style='font-size: .8em'>Clear Big Wall in less than " + number + " from start of run</span>"
                     );
                 },
                 display: function () {
@@ -9955,9 +9894,7 @@ function newGame() {
                 description: function (number) {
                     number = formatMinutesForDescriptions(this.breakpoints[number]);
                     return (
-                        "<span style='font-size: .8em'>Clear Atlantrimp in less than " +
-                        number +
-                        " from start of run</span>"
+                        "<span style='font-size: .8em'>Clear Atlantrimp in less than " + number + " from start of run</span>"
                     );
                 },
                 display: function () {
@@ -10141,16 +10078,16 @@ function newGame() {
                     ];
                 },
                 tiers: [
-                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7,
-                    7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9,
+                    2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7,
+                    7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9,
                 ],
                 description: function (number) {
                     return this.descriptions[number];
                 },
                 filters: [
-                    19, 29, 29, -1, 39, 59, -1, 79, -1, 99, 124, 59, 119, 74, -1, 74, 59, 59, 59, 124, 144, 59, 59, 109,
-                    -1, 164, 59, -1, 179, 179, 199, 199, 229, 245, 179, 189, 214, 199, 229, 299, 235, 65, 169, 199, 424,
-                    349, -1, 129, 399, 549, 599, 199, 324, 299, 299, 424, 229, 179, 424, 549,
+                    19, 29, 29, -1, 39, 59, -1, 79, -1, 99, 124, 59, 119, 74, -1, 74, 59, 59, 59, 124, 144, 59, 59, 109, -1,
+                    164, 59, -1, 179, 179, 199, 199, 229, 245, 179, 189, 214, 199, 229, 299, 235, 65, 169, 199, 424, 349, -1,
+                    129, 399, 549, 599, 199, 324, 299, 299, 424, 229, 179, 424, 549,
                 ],
                 filterLevel: function () {
                     return game.global.highestLevelCleared;
@@ -10286,15 +10223,15 @@ function newGame() {
                     ];
                 },
                 tiers: [
-                    10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14,
-                    14, 14,
+                    10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14,
+                    14,
                 ],
                 description: function (number) {
                     return this.descriptions[number];
                 },
                 filters: [
-                    -1, 14, 19, 24, 34, 39, 44, 49, 59, 69, 75, 75, 79, 84, 89, 104, 109, 114, 119, 135, 135, 100, 154,
-                    174, 174, 224, 244,
+                    -1, 14, 19, 24, 34, 39, 44, 49, 59, 69, 75, 75, 79, 84, 89, 104, 109, 114, 119, 135, 135, 100, 154, 174,
+                    174, 224, 244,
                 ],
                 filterLevel: function () {
                     return game.global.highestRadonLevelCleared;
@@ -10401,8 +10338,8 @@ function newGame() {
                 [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10000],
             ],
             rarityBreakpoints: [
-                41, 60, 80, 100, 125, 146, 166, 181, 201, 230, 300, 400, 500, 600, 700, 1, 40, 80, 100, 135, 175, 200,
-                225, 250, 275, 300, 999,
+                41, 60, 80, 100, 125, 146, 166, 181, 201, 230, 300, 400, 500, 600, 700, 1, 40, 80, 100, 135, 175, 200, 225,
+                250, 275, 300, 999,
             ], //don't forget to update the 999 bracket when adding a new rarity!
             universeBreakpoints: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
             priceIncrease: [1.5, 1.5, 1.25, 1.19, 1.15, 1.12, 1.1, 1.06, 1.04, 1.03, 1.02, 1.015],
@@ -11226,9 +11163,7 @@ function newGame() {
                             imports.push(item);
                         }
                     }
-                    var enemySeed = game.global.mapsActive
-                        ? Math.floor(Math.random() * 10000000)
-                        : game.global.enemySeed++;
+                    var enemySeed = game.global.mapsActive ? Math.floor(Math.random() * 10000000) : game.global.enemySeed++;
                     var selected = imports[getRandomIntSeeded(enemySeed, 0, imports.length)];
                     game.badGuys[selected].loot(level, true);
                 },
@@ -11345,7 +11280,7 @@ function newGame() {
                         "Loot",
                         "apple",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11357,13 +11292,7 @@ function newGame() {
                 fast: false,
                 loot: function (level) {
                     var amt = rewardResource("wood", 0.5, level, true);
-                    message(
-                        "That Grimp dropped " + prettify(amt) + " wood!",
-                        "Loot",
-                        "tree-deciduous",
-                        null,
-                        "primary"
-                    );
+                    message("That Grimp dropped " + prettify(amt) + " wood!", "Loot", "tree-deciduous", null, "primary");
                 },
             },
             Golimp: {
@@ -11398,7 +11327,7 @@ function newGame() {
                         "Loot",
                         icon,
                         null,
-                        tag
+                        tag,
                     );
                 },
             },
@@ -11410,13 +11339,7 @@ function newGame() {
                 fast: false,
                 loot: function (level) {
                     var amt = rewardResource("metal", 0.5, level, true);
-                    message(
-                        "That Seirimp dropped " + prettify(amt) + " metal! Neat-O.",
-                        "Loot",
-                        "*cubes",
-                        null,
-                        "primary"
-                    );
+                    message("That Seirimp dropped " + prettify(amt) + " metal! Neat-O.", "Loot", "*cubes", null, "primary");
                 },
             },
             Slagimp: {
@@ -11431,7 +11354,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         null,
-                        "secondary"
+                        "secondary",
                     );
                 },
             },
@@ -11449,7 +11372,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11491,13 +11414,11 @@ function newGame() {
                 loot: function (level) {
                     var amt = rewardResource("wood", 0.35, level, true);
                     message(
-                        "The Entimp is no more. You manage to salvage " +
-                            prettify(amt) +
-                            " logs of wood from his trunk!",
+                        "The Entimp is no more. You manage to salvage " + prettify(amt) + " logs of wood from his trunk!",
                         "Loot",
                         "tree-deciduous",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11513,7 +11434,7 @@ function newGame() {
                         "Loot",
                         "apple",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11531,7 +11452,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11551,7 +11472,7 @@ function newGame() {
                         "Loot",
                         "piggy-bank",
                         null,
-                        "primary"
+                        "primary",
                     );
                     if (game.global.runningChallengeSquared) return;
                     var minLevel = game.global.universe == 2 ? 16 : 21;
@@ -11561,15 +11482,11 @@ function newGame() {
                         if (game.global.challengeActive == "Domination") amt *= 3;
                         amt = rewardResource("helium", amt, level);
                         message(
-                            "You were able to extract " +
-                                prettify(amt) +
-                                " " +
-                                heliumOrRadon(true) +
-                                "s from that Blimp!",
+                            "You were able to extract " + prettify(amt) + " " + heliumOrRadon(true) + "s from that Blimp!",
                             "Loot",
                             heliumIcon(true),
                             "helium",
-                            "helium"
+                            "helium",
                         );
                         if (game.global.world >= 40 && game.global.challengeActive == "Balance") {
                             game.challenges.Balance.onComplete();
@@ -11768,7 +11685,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         null,
-                        "secondary"
+                        "secondary",
                     );
                 },
             },
@@ -11787,7 +11704,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         null,
-                        "secondary"
+                        "secondary",
                     );
                 },
             },
@@ -11807,7 +11724,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         null,
-                        "secondary"
+                        "secondary",
                     );
                     checkAchieve("palaceTimed");
                 },
@@ -11828,7 +11745,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                     checkAchieve("meltingTimed");
                 },
@@ -11848,7 +11765,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11932,7 +11849,7 @@ function newGame() {
                         "Loot",
                         "*cogs",
                         null,
-                        "primary"
+                        "primary",
                     );
                     if (game.global.challengeActive == "Crushed") {
                         game.challenges.Crushed.onComplete();
@@ -11952,7 +11869,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11969,7 +11886,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -11986,7 +11903,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12005,7 +11922,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12024,7 +11941,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12050,7 +11967,7 @@ function newGame() {
                         "Loot",
                         "*cogs",
                         null,
-                        "primary"
+                        "primary",
                     );
                     if (game.global.challengeActive == "Devastation") {
                         game.challenges.Devastation.onComplete();
@@ -12075,7 +11992,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12094,7 +12011,7 @@ function newGame() {
                         "Loot",
                         "apple",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12113,7 +12030,7 @@ function newGame() {
                         "Loot",
                         "tree-deciduous",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12144,7 +12061,7 @@ function newGame() {
                             "Loot",
                             heliumIcon(true),
                             "helium",
-                            "helium"
+                            "helium",
                         );
                     }
                     if (challengeActive("Slow") && game.global.world == 120) {
@@ -12191,7 +12108,7 @@ function newGame() {
                                 " challenge! You have been rewarded with " +
                                 prettify(reward) +
                                 " Helium, and you may repeat the challenge.",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges[challenge].heldHelium = 0;
                         game.global.challengeActive = "";
@@ -12214,11 +12131,7 @@ function newGame() {
                     if (game.global.spireActive) {
                         return;
                     }
-                    if (
-                        game.global.challengeActive == "Eradicated" &&
-                        game.global.world >= 59 &&
-                        !game.global.brokenPlanet
-                    )
+                    if (game.global.challengeActive == "Eradicated" && game.global.world >= 59 && !game.global.brokenPlanet)
                         planetBreaker();
                     if (!game.global.runningChallengeSquared) {
                         var amt = 30;
@@ -12232,17 +12145,11 @@ function newGame() {
                             "Loot",
                             heliumIcon(true),
                             "helium",
-                            "helium"
+                            "helium",
                         );
                     }
                     if (game.global.world % 5 == 0) {
-                        message(
-                            "The Omnipotrimp explodes, killing all of your soldiers!",
-                            "Combat",
-                            null,
-                            null,
-                            "trimp"
-                        );
+                        message("The Omnipotrimp explodes, killing all of your soldiers!", "Combat", null, null, "trimp");
                         game.stats.trimpsKilled.value += game.resources.trimps.soldiers;
                         game.global.soldierHealth = 0;
                         game.global.fighting = false;
@@ -12266,7 +12173,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12285,7 +12192,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -12301,7 +12208,7 @@ function newGame() {
                     if (game.global.challengeActive == "Quagmire") {
                         message(
                             "You have completed The Black Bog! 1 stack of Exhausted and Motivated have been removed from your Trimps.",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges.Quagmire.motivatedStacks--;
                         game.challenges.Quagmire.exhaustedStacks--;
@@ -12326,7 +12233,7 @@ function newGame() {
                         "You have completed the Frozen Castle! The map has melted, but you managed to find a " +
                             rarity +
                             " Heirloom!",
-                        "Notices"
+                        "Notices",
                     );
                     if (game.global.challengeActive == "Hypothermia") game.challenges.Hypothermia.onComplete();
                 },
@@ -12354,7 +12261,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                     game.unlocks.impCount.Goblimp++;
                 },
@@ -12376,7 +12283,7 @@ function newGame() {
                         "Loot",
                         "*diamond",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                     game.unlocks.impCount.Feyimp++;
                 },
@@ -12401,7 +12308,7 @@ function newGame() {
                         "Loot",
                         "th",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                     game.unlocks.impCount.Flutimp++;
                 },
@@ -12425,10 +12332,7 @@ function newGame() {
                     if (game.global.expandingTauntimp) {
                         var newMax = game.resources.trimps.realMax();
                         var added = newMax - oldMax;
-                        if (
-                            game.global.challengeActive != "Trapper" &&
-                            game.global.challengeActive != "Trappapalooza"
-                        ) {
+                        if (game.global.challengeActive != "Trapper" && game.global.challengeActive != "Trappapalooza") {
                             if (game.resources.trimps.owned == oldMax) {
                                 game.resources.trimps.owned = newMax;
                             } else {
@@ -12442,7 +12346,7 @@ function newGame() {
                             "Loot",
                             "gift",
                             "exotic",
-                            "exotic"
+                            "exotic",
                         );
                     } else {
                         var amt = Math.ceil(game.resources.trimps.max * 0.003);
@@ -12457,15 +12361,10 @@ function newGame() {
                                 ? addMaxHousing(amt, false)
                                 : addMaxHousing(amt, true);
                         var msg = "It's nice, warm, and roomy in that dead " + name + ". ";
-                        if (
-                            game.global.challengeActive != "Trapper" &&
-                            game.global.challengeActive != "Trappapalooza"
-                        ) {
+                        if (game.global.challengeActive != "Trapper" && game.global.challengeActive != "Trappapalooza") {
                             msg += "You found ";
                             if (amt == 1) msg += prettify(amt) + " Trimp inside, and it looks hella bored.";
-                            else
-                                msg +=
-                                    prettify(amt) + " Trimps inside, and they all seem content to stay living there!";
+                            else msg += prettify(amt) + " Trimps inside, and they all seem content to stay living there!";
                             message(msg, "Loot", "gift", "exotic", "exotic");
                         } else {
                             message(
@@ -12479,7 +12378,7 @@ function newGame() {
                                 "Loot",
                                 "gift",
                                 "exotic",
-                                "exotic"
+                                "exotic",
                             );
                         }
                     }
@@ -12523,7 +12422,7 @@ function newGame() {
                         "Loot",
                         "star",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                 },
             },
@@ -12545,7 +12444,7 @@ function newGame() {
                         "Loot",
                         "glass",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                 },
             },
@@ -12571,7 +12470,7 @@ function newGame() {
                         "Loot",
                         "*dice",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                     game.unlocks.impCount.Jestimp++;
                 },
@@ -12648,7 +12547,7 @@ function newGame() {
                         "Loot",
                         "magnet",
                         "exotic",
-                        "exotic"
+                        "exotic",
                     );
                 },
             },
@@ -12665,7 +12564,7 @@ function newGame() {
                         "Loot",
                         "italic",
                         null,
-                        "bone"
+                        "bone",
                     );
                     game.global.b++;
                     game.global.lastSkeletimp = new Date().getTime();
@@ -12685,7 +12584,7 @@ function newGame() {
                         "Loot",
                         "italic",
                         null,
-                        "bone"
+                        "bone",
                     );
                     game.global.b += 2;
                     game.global.lastSkeletimp = new Date().getTime();
@@ -12916,7 +12815,7 @@ function newGame() {
                     else
                         message(
                             "You found a map to an even more advanced version of the Bionic Wonderland! Looks scary... Your scientists remind you that you can only carry 3 of these incredibly heavy, metallic maps at a time.",
-                            "Story"
+                            "Story",
                         );
                     var roman = romanNumeral(tier + 1);
                     createMap(tier * 15 + 125, "Bionic Wonderland " + roman, "Bionic", 3, 100, 2.6, true);
@@ -12954,14 +12853,11 @@ function newGame() {
                                     "% extra damage thanks to your pets, and MagnetoShriek now removes " +
                                     Math.floor(values[1]) +
                                     "% of an Improbability's attack",
-                                "Notices"
+                                "Notices",
                             );
                             for (var reward in game.bwRewards) {
                                 if (level == game.bwRewards[reward].requires) {
-                                    if (
-                                        game.bwRewards[reward].fire &&
-                                        typeof game.bwRewards[reward].fire === "function"
-                                    )
+                                    if (game.bwRewards[reward].fire && typeof game.bwRewards[reward].fire === "function")
                                         game.bwRewards[reward].fire();
                                     message("You also just unlocked " + reward + "!", "Notices");
                                 }
@@ -13134,7 +13030,7 @@ function newGame() {
                             "!",
                         "Story",
                         "*home5",
-                        "highlightStoryMessage"
+                        "highlightStoryMessage",
                     );
                 },
             },
@@ -13165,7 +13061,7 @@ function newGame() {
                 fire: function () {
                     message(
                         "You have slain the Warden and taken his keys. How weird would it be if they fit in that key hole on the portal?",
-                        "Story"
+                        "Story",
                     );
                     game.challenges.Electricity.hasKey = true;
                     game.global.prisonClear++;
@@ -13184,11 +13080,11 @@ function newGame() {
                 fire: function () {
                     message(
                         "You've never been here before. Like, ever. This entire place felt cold and unfamiliar. Where are you? Why have so many Trimps had to fall to get here? You're suddenly angry, it's time to take a stand.",
-                        "Story"
+                        "Story",
                     );
                     message(
                         "You have permanently unlocked a new Perk, Relentlessness, which will remain unlocked through portals.",
-                        "Notices"
+                        "Notices",
                     );
                     game.portal.Relentlessness.locked = false;
                 },
@@ -13228,7 +13124,7 @@ function newGame() {
                                 "s from that Blimp! Now that you know how to do it, you'll be able to extract " +
                                 resource +
                                 " from normal Blimps.",
-                            "Story"
+                            "Story",
                         );
                     }
                     if (game.global.challengeActive == "Metal") {
@@ -13486,7 +13382,7 @@ function newGame() {
                             null,
                             null,
                             "repeated",
-                            convertUnlockIconToSpan(this)
+                            convertUnlockIconToSpan(this),
                         );
                     }
                 },
@@ -13569,7 +13465,7 @@ function newGame() {
                 fire: function () {
                     message(
                         "You found a map to an Imploding Star inside of a supercooled dimension. The temperature there is perfect!",
-                        "Story"
+                        "Story",
                     );
                     createMap(170, "Imploding Star", "Star", 3, 100, 3.2, true);
                 },
@@ -13805,7 +13701,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -13823,7 +13719,7 @@ function newGame() {
                         "Loot",
                         "apple",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -13841,7 +13737,7 @@ function newGame() {
                         "Loot",
                         "tree-deciduous",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -13987,8 +13883,7 @@ function newGame() {
                 },
             },
             Smithy: {
-                message:
-                    "Your equipment isn't going to cut it in this Universe. Better get someone to upgrade it for you!",
+                message: "Your equipment isn't going to cut it in this Universe. Better get someone to upgrade it for you!",
                 world: 5,
                 level: 9,
                 blockU1: true,
@@ -13998,7 +13893,7 @@ function newGame() {
                     if (game.global.challengeActive == "Smithless") {
                         message(
                             "Well these plans certainly don't look useful in this Universe. Better put that away for later.",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges.Smithless.smithHeld = true;
                         return;
@@ -14094,7 +13989,7 @@ function newGame() {
                     if (game.global.challengeActive == "Trapper" || game.global.challengeActive == "Trappapalooza") {
                         message(
                             "Your Scientists let you know that your Trimps won't understand the book, but they offer to hold on to it for you for later. How nice of them!",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges[game.global.challengeActive].heldBooks++;
                         return;
@@ -14127,7 +14022,7 @@ function newGame() {
                             : game.challenges[game.global.challengeActive];
                         message(
                             "Your Trimps simply do not understand what this book is talking about. It's blowing their minds. What is a 'Miner'?!",
-                            "Notices"
+                            "Notices",
                         );
                         challenge.fireAbandon = true;
                         return;
@@ -14156,7 +14051,7 @@ function newGame() {
                     if (game.global.challengeActive == "Scientist") {
                         message(
                             "Your Trimps think they're too good at Science to read your dumb book. They're already working on Portal technology!",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges.Scientist.fireAbandon = true;
                         return;
@@ -14185,7 +14080,7 @@ function newGame() {
                     if (game.global.challengeActive == "Scientist") {
                         message(
                             "You found a book called Speedscience, but you haven't found anyone to read it. Such a shame.",
-                            "Notices"
+                            "Notices",
                         );
                         game.challenges.Scientist.heldBooks++;
                         return;
@@ -14296,7 +14191,7 @@ function newGame() {
                         challenge.holdMagma = true;
                         message(
                             "This book really doesn't help too much while you're dealing with the minerlessness of this dimension. Better let your scientists hold this one for you for a bit.",
-                            "Notices"
+                            "Notices",
                         );
                         return;
                     }
@@ -14377,12 +14272,12 @@ function newGame() {
                                     " blankly at you for a moment, then slowly and quietly place" +
                                     notS +
                                     " the new book on the shelves.",
-                                "Notices"
+                                "Notices",
                             );
                         } else {
                             message(
                                 "You don't have any Scientists to not know how to handle this book, so everything's chill.",
-                                "Notices"
+                                "Notices",
                             );
                         }
                         challenge.heldBooks++;
@@ -14412,12 +14307,12 @@ function newGame() {
                                     " appreciate" +
                                     antiS +
                                     " the fact that you've managed to find another useless book, but they make sure to let you know it's still useless.",
-                                "Notices"
+                                "Notices",
                             );
                         else
                             message(
                                 "You don't really know what to do with this book. Not even the Trimps will eat it, so you put it on a shelf for later.",
-                                "Notices"
+                                "Notices",
                             );
                         game.challenges.Metal.heldMegaBooks++;
                         return;
@@ -14458,7 +14353,7 @@ function newGame() {
                 fire: function () {
                     message(
                         "You look down and see a green gem that seems to stare back. You pick it up and feel adrenaline surge through your body. Probably best to bring this back to the lab for some research.",
-                        "Story"
+                        "Story",
                     );
                     unlockUpgrade("Anger");
                 },
@@ -14472,7 +14367,7 @@ function newGame() {
                 fire: function () {
                     message(
                         "You look down and see a blue gem that seems to stare back. You pick it up and are immediately overwhelmed by feelings of intense power. You figure this could be used to focus your Portal Generator in this Universe.",
-                        "Story"
+                        "Story",
                     );
                     unlockUpgrade("Rage");
                 },
@@ -14512,7 +14407,7 @@ function newGame() {
                         if (!checkIfLiquidZone())
                             message(
                                 "Your scientists don't think that it's a very smart idea to try any of the suggestions in this book.",
-                                "Notices"
+                                "Notices",
                             );
                         game.challenges.Trimp.heldBooks++;
                         return;
@@ -14551,7 +14446,7 @@ function newGame() {
                     createMap(33, "Trimple Of Doom", "Doom", 3, 100, 1.8, true);
                     message(
                         "There is something strange about this map. It doesn't seem to reflect any light at all, just pure darkness.",
-                        "Story"
+                        "Story",
                     );
                 },
             },
@@ -14565,7 +14460,7 @@ function newGame() {
                     createMap(33, "Atlantrimp", "Atlantis", 3, 100, 1.8, true);
                     message(
                         "You found an incredibly wet map. It seems to actually be generating water out of nothing, making storage very difficult without flooding the surrounding area. You're sure your Scientists can handle it though, they seem pretty smart.",
-                        "Story"
+                        "Story",
                     );
                 },
             },
@@ -14635,7 +14530,7 @@ function newGame() {
                         "Loot",
                         "gift",
                         null,
-                        "secondary"
+                        "secondary",
                     );
                 },
             },
@@ -14652,7 +14547,7 @@ function newGame() {
                         "Loot",
                         "apple",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -14669,7 +14564,7 @@ function newGame() {
                         "Loot",
                         "tree-deciduous",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -14690,7 +14585,7 @@ function newGame() {
                         "Loot",
                         "*cubes",
                         null,
-                        "primary"
+                        "primary",
                     );
                 },
             },
@@ -14713,7 +14608,7 @@ function newGame() {
                         "Loot",
                         "*safe",
                         "spireMetalsMsg",
-                        "primary"
+                        "primary",
                     );
                 },
                 specialFilter: function () {
@@ -14835,8 +14730,7 @@ function newGame() {
                 purchased: 0,
                 craftTime: 60,
                 AP: true,
-                tooltip:
-                    "A pretty sick mansion for your Trimps to live in. Each Mansion supports $incby$ more Trimp{s}.",
+                tooltip: "A pretty sick mansion for your Trimps to live in. Each Mansion supports $incby$ more Trimp{s}.",
                 cost: {
                     gems: [100, 1.2],
                     food: [3000, 1.2],
@@ -14892,8 +14786,7 @@ function newGame() {
                 purchased: 0,
                 craftTime: 480,
                 AP: true,
-                tooltip:
-                    "A Gateway to another dimension, where your Trimps can sleep and work. Supports $incby$ Trimp{s}.",
+                tooltip: "A Gateway to another dimension, where your Trimps can sleep and work. Supports $incby$ Trimp{s}.",
                 cost: {
                     fragments: [3000, 1.14],
                     gems: [20000, 1.14],
@@ -14974,8 +14867,7 @@ function newGame() {
                     if (this.owned > 0) return;
                     var buildings = game.buildings;
                     var collectors = buildings.Collector.owned;
-                    if (autoBattle.oneTimers.Collectology.owned)
-                        collectors *= autoBattle.oneTimers.Collectology.getHubs();
+                    if (autoBattle.oneTimers.Collectology.owned) collectors *= autoBattle.oneTimers.Collectology.getHubs();
                     var total =
                         buildings.Hut.owned +
                         buildings.House.owned +
@@ -15427,7 +15319,7 @@ function newGame() {
                             toZalgo(
                                 "This particular Universe seems to directly conflict with the Amalgamators, yet they're here and the Trimps they Amalgamate seem immune to the dimensional restrictions. Things are getting weird though.",
                                 1,
-                                Math.ceil(game.global.world / 100)
+                                Math.ceil(game.global.world / 100),
                             ) +
                             "</i></p>";
                     } else
@@ -15607,9 +15499,7 @@ function newGame() {
             Battle: {
                 tooltip: function () {
                     return (
-                        "Increase Trimp attack and health by " +
-                        prettify(game.goldenUpgrades.Battle.nextAmt() * 100) +
-                        "%."
+                        "Increase Trimp attack and health by " + prettify(game.goldenUpgrades.Battle.nextAmt() * 100) + "%."
                     );
                 },
                 nextAmt: function () {
@@ -15761,7 +15651,7 @@ function newGame() {
                     if (getPerkLevel("Coordinated"))
                         game.portal.Coordinated.currentSend = Math.ceil(
                             game.portal.Coordinated.currentSend *
-                                (0.25 * Math.pow(game.portal.Coordinated.modifier, getPerkLevel("Coordinated")) + 1)
+                                (0.25 * Math.pow(game.portal.Coordinated.modifier, getPerkLevel("Coordinated")) + 1),
                         );
                 },
             },
@@ -15929,7 +15819,7 @@ function newGame() {
                     equipment.blockNow = true;
                     equipment.tooltip = game.equipment.Shield.blocktip;
                     equipment.blockCalculated = Math.round(
-                        equipment.block * Math.pow(1.19, (equipment.prestige - 1) * game.global.prestige.block + 1)
+                        equipment.block * Math.pow(1.19, (equipment.prestige - 1) * game.global.prestige.block + 1),
                     );
                     levelEquipment("Shield", 1);
                 },
@@ -16047,7 +15937,7 @@ function newGame() {
                         base *
                         Math.pow(
                             game.upgrades.Gymystic.modifier + 0.01 * game.upgrades.Gymystic.done,
-                            game.buildings.Gym.owned
+                            game.buildings.Gym.owned,
                         );
                     game.global.block += (game.buildings.Gym.increase.by - oldBlock) * game.buildings.Gym.owned;
                 },
@@ -16158,8 +16048,7 @@ function newGame() {
             },
             Trainers: {
                 locked: 1,
-                tooltip:
-                    "This book holds all of the secrets of upper management. Train your Trimps to train other Trimps.",
+                tooltip: "This book holds all of the secrets of upper management. Train your Trimps to train other Trimps.",
                 done: 0,
                 allowed: 0,
                 cost: {
@@ -16220,7 +16109,7 @@ function newGame() {
                 fire: function () {
                     addMaxHousing(
                         game.buildings.Hut.owned * game.buildings.Hut.increase.by,
-                        bwRewardUnlocked("AutoStructure")
+                        bwRewardUnlocked("AutoStructure"),
                     );
                     game.buildings.Hut.increase.by *= 2;
                 },
@@ -16240,7 +16129,7 @@ function newGame() {
                 fire: function () {
                     addMaxHousing(
                         game.buildings.House.owned * game.buildings.House.increase.by,
-                        bwRewardUnlocked("AutoStructure")
+                        bwRewardUnlocked("AutoStructure"),
                     );
                     game.buildings.House.increase.by *= 2;
                 },
@@ -16260,7 +16149,7 @@ function newGame() {
                 fire: function () {
                     addMaxHousing(
                         game.buildings.Mansion.owned * game.buildings.Mansion.increase.by,
-                        bwRewardUnlocked("AutoStructure")
+                        bwRewardUnlocked("AutoStructure"),
                     );
                     game.buildings.Mansion.increase.by *= 2;
                 },
@@ -16280,7 +16169,7 @@ function newGame() {
                 fire: function () {
                     addMaxHousing(
                         game.buildings.Hotel.owned * game.buildings.Hotel.increase.by,
-                        bwRewardUnlocked("AutoStructure")
+                        bwRewardUnlocked("AutoStructure"),
                     );
                     game.buildings.Hotel.increase.by *= 2;
                 },
@@ -16300,7 +16189,7 @@ function newGame() {
                 fire: function () {
                     addMaxHousing(
                         game.buildings.Resort.owned * game.buildings.Resort.increase.by,
-                        bwRewardUnlocked("AutoStructure")
+                        bwRewardUnlocked("AutoStructure"),
                     );
                     game.buildings.Resort.increase.by *= 2;
                 },
@@ -16990,8 +16879,7 @@ function newGame() {
             },
             Geneticistassist: {
                 requires: 170,
-                description:
-                    "Unlock Geneticistassist, the most powerful Geneticist Automator in this side of the galaxy!",
+                description: "Unlock Geneticistassist, the most powerful Geneticist Automator in this side of the galaxy!",
                 fire: function () {
                     tooltip("The Geneticistassist", null, "update");
                     game.global.Geneticistassist = true;
