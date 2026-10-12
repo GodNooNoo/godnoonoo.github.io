@@ -3,16 +3,16 @@
     <head>
         <meta charset="utf-8" />
 
-        <title>Trimps 5.9.2</title>
+        <title>Trimps 5.10.1</title>
         <meta name="description" content="Trimps" />
         <meta name="author" content="Greensatellite" />
         <link rel="stylesheet" href="css/bootstrap.css" />
         <link rel="stylesheet" href="fonts/icomoon/style.css" />
         <link rel="icon" href="favicon.ico" type="image/x-icon" />
-        <link rel="stylesheet" type="text/css" href="css/style.css?38" />
+        <link rel="stylesheet" type="text/css" href="css/style.css?39" />
     </head>
     <!-- 		Trimps
-		Copyright (C) 2023 Zach Hood
+		Copyright (C) 2025 Zach Hood
 
 		This program is free software: you can redistribute it and/or modify
 		it under the terms of the GNU General Public License as published by
@@ -491,8 +491,7 @@
                                 <br />
                             </div>
                             <div id="empHide" style="visibility: hidden">
-                                <span id="trimpsEmployed">0</span>/<span id="maxEmployed">0</span>
-                                employed
+                                <span id="trimpsEmployed">0</span>/<span id="maxEmployed">0</span> employed
                             </div>
                             <div id="trapArea">
                                 <div
@@ -877,9 +876,16 @@
                                                         id="autoGoldenBtn"
                                                         onmouseover="tooltip('AutoGold', null, event)"
                                                         onmouseout="tooltip('hide')"
-                                                        class="pointer noselect settingBtn0 autoUpgradeBtn"
+                                                        class="pointer noselect settingBtn0 autoUpgradeBtn toggleConfigBtn"
                                                     >
                                                         <div id="autoGoldenText" onclick="toggleAutoGolden()">AutoGold</div>
+                                                        <div
+                                                            id="goldConfig"
+                                                            aria-label="Configure Auto Golden"
+                                                            onclick="archoGolden.popup()"
+                                                        >
+                                                            <span class="glyphicon glyphicon-cog"></span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 <div class="col-xs-3 lowPad">
@@ -941,13 +947,10 @@
                                             class="btn btn-primary btn-lg"
                                             onclick="u2Mutations.swapTab(true)"
                                         >
-                                            Swap to Mutators
-                                            <span id="mutatorsAlert2" class="alert badge"></span>
+                                            Swap to Mutators <span id="mutatorsAlert2" class="alert badge"></span>
                                         </div>
                                         <div class="row noMarg">
-                                            <div class="col-xs-3 lowPad">
-                                                <div id="talentsAffordable"></div>
-                                            </div>
+                                            <div class="col-xs-3 lowPad"><div id="talentsAffordable"></div></div>
                                             <div class="col-xs-6 lowPad">
                                                 <div id="talentsTitle"><span id="essenceOwned">0</span> Dark Essence</div>
                                             </div>
@@ -964,8 +967,7 @@
                                             </div>
                                         </div>
                                         <div id="talentsCost">
-                                            Your next mastery costs
-                                            <span id="talentsNextCost">0</span>.
+                                            Your next mastery costs <span id="talentsNextCost">0</span>.
                                         </div>
                                         <div id="talentsHere" onload="preventZoom(this)"></div>
                                     </div>
@@ -1206,8 +1208,7 @@
                                                 <div class="battleStatsTitle" id="goodGuyName">
                                                     <span id="realTrimpName">Trimps</span>&nbsp;(<span id="trimpsFighting"
                                                         >1</span
-                                                    >) <span id="anticipationSpan"></span>
-                                                    <span id="titimpBuff"></span>
+                                                    >) <span id="anticipationSpan"></span> <span id="titimpBuff"></span>
                                                     <span id="debuffSpan"></span>
                                                 </div>
                                             </div>
@@ -1317,8 +1318,8 @@
                                                 style="padding-right: 0"
                                                 onclick="getBattleStatBd('attack')"
                                             >
-                                                <span id="goodGuyAttack" class="attackColorNormal"></span>
-                                                DMG <span id="critSpan"></span>
+                                                <span id="goodGuyAttack" class="attackColorNormal"></span> DMG
+                                                <span id="critSpan"></span>
                                             </div>
                                             <div
                                                 class="col-xs-4 noPad pointer noselect bdHover"
@@ -1326,8 +1327,7 @@
                                                 style="visibility: hidden"
                                                 onclick="getBattleStatBd('block')"
                                             >
-                                                <span id="goodGuyBlock">0</span>
-                                                <span id="goodGuyBlockName">BLK</span>
+                                                <span id="goodGuyBlock">0</span> <span id="goodGuyBlockName">BLK</span>
                                             </div>
                                             <div
                                                 class="col-xs-2 pointer noselect"
@@ -1390,8 +1390,8 @@
                                                     ><br />
                                                     <div class="guyRow" id="badGuyRow">
                                                         <div>
-                                                            <span id="badGuyAttack" class="dmgColorWhite"></span>
-                                                            DMG <span id="badCrit"></span>
+                                                            <span id="badGuyAttack" class="dmgColorWhite"></span> DMG
+                                                            <span id="badCrit"></span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1427,8 +1427,9 @@
                             <div class="row" id="gridRow">
                                 <div class="col-xs-2" id="battleBtnsColumn">
                                     <div id="battleSideTitle" onmouseover="getZoneStats(event)" onmouseout="tooltip('hide')">
-                                        <span id="worldName">Zone</span>
-                                        <span id="worldNumber">1</span><br /><span id="mapBonus"></span>
+                                        <span id="worldName">Zone</span> <span id="worldNumber">1</span><br /><span
+                                            id="mapBonus"
+                                        ></span>
                                     </div>
                                     <div class="battleSideBtnContainer">
                                         <span
@@ -2369,8 +2370,7 @@
                     <div id="achievementHelpContainer" style="display: none">
                         You can earn achievements by doing stuff. Each achievement will boost the amount of damage your
                         Trimps can deal, and later achievements grant a larger bonus. You can learn more about an achievement
-                        by hovering your mouse over it.
-                        <b>Click on an Achievement on this screen to track it!</b>
+                        by hovering your mouse over it. <b>Click on an Achievement on this screen to track it!</b>
                     </div>
                 </div>
                 <div class="col-xs-1"></div>
@@ -2435,8 +2435,8 @@
                 Carry, or Recycle it. Only equipped Heirlooms give you stats, and you can only have one of each type of
                 Heirloom equipped at a time. You can click a stat to upgrade or replace it. You can also click on the
                 Heirloom's name on this menu to rename it, or click on the icon to change it.<br /><br />
-                The currency to upgrade and replace stats,
-                <b style="color: rgb(75, 41, 197)">Nullifium, or Nu</b>, can only be gathered by recycling an Heirloom.
+                The currency to upgrade and replace stats, <b style="color: rgb(75, 41, 197)">Nullifium, or Nu</b>, can only
+                be gathered by recycling an Heirloom.
                 <b style="color: red"
                     >You can upgrade any Staff and Shield to the value of your total earned Nu. Nu is not spent, but dictates
                     how powerful each of your Heirlooms can be!</b
@@ -2463,7 +2463,7 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-xs-6">
+                <div class="col-xs-6" id="heirloomSelections">
                     <div id="equippedHeirlooms">
                         <div class="row">
                             <div id="ShieldEquippedContainer" class="col-xs-6 heirloomEquippedContainer">
@@ -2651,9 +2651,7 @@
                     ></span>
                 </div>
                 <hr />
-                <div id="tutorialText">
-                    <div id="tutorialTextInner" class="niceScroll"></div>
-                </div>
+                <div id="tutorialText"><div id="tutorialTextInner" class="niceScroll"></div></div>
                 <hr />
                 <div id="tutorialGoal"></div>
             </div>
@@ -2669,10 +2667,10 @@
         </div>
         <script type="text/javascript" src="lz-string.js"></script>
         <script type="text/javascript" src="decimal.min.js"></script>
-        <script type="text/javascript" src="config.js?60"></script>
-        <script type="text/javascript" src="updates.js?60"></script>
-        <script type="text/javascript" src="playerSpire.js?60"></script>
-        <script type="text/javascript" src="objects.js?60"></script>
-        <script type="text/javascript" src="main.js?60"></script>
+        <script type="text/javascript" src="config.js?62"></script>
+        <script type="text/javascript" src="updates.js?62"></script>
+        <script type="text/javascript" src="playerSpire.js?62"></script>
+        <script type="text/javascript" src="objects.js?62"></script>
+        <script type="text/javascript" src="main.js?62"></script>
     </body>
 </html>
