@@ -774,6 +774,8 @@ var autoBattle = {
     lastSelect: "",
     lastActions: [],
     activeContract: "",
+    sealed: false,
+    canSeal: false,
     lootAvg: {
         accumulator: 0,
         counter: 0,
@@ -833,6 +835,7 @@ var autoBattle = {
             dustMult: 0,
             gooStored: 0,
             lastGoo: -1,
+            immune: "",
             bleed: {
                 time: 0,
                 mod: 0,
@@ -849,6 +852,7 @@ var autoBattle = {
                 time: 0,
                 mod: 0,
                 count: 0,
+                timeApplied: 0,
             },
         };
     },
@@ -871,6 +875,8 @@ var autoBattle = {
         this.activeContract = "";
         this.resetStats();
         this.rings = this.getFreshRings();
+        this.sealed = false;
+        this.canSeal = false;
         for (var item in this.items) {
             item = this.items[item];
             item.owned = item.zone ? false : true;
@@ -907,6 +913,8 @@ var autoBattle = {
         data.activeContract = this.activeContract;
         data.items = {};
         data.rings = this.rings;
+        data.sealed = this.sealed;
+        data.canSeal = this.canSeal;
         for (var item in this.items) {
             var thisItem = this.items[item];
             if (!thisItem.owned) continue;
@@ -948,7 +956,8 @@ var autoBattle = {
             else tab.style.display = "table-cell";
             return;
         }
-        tab.style.display = "table-cell";
+        if (data.sealed) tab.style.display = "none";
+        else tab.style.display = "table-cell";
         this.enemyLevel = data.enemyLevel;
         this.dust = data.dust;
         this.shards = data.shards ? data.shards : 0;
@@ -958,12 +967,16 @@ var autoBattle = {
         if (data.rings && data.rings.level) this.rings = data.rings;
         else this.rings = this.getFreshRings();
         if (data.activeContract) this.activeContract = data.activeContract;
+        if (data.sealed) this.sealed = true;
+        if (data.canSeal) this.canSeal = true;
+
         if (data.presets) this.presets = data.presets;
         else {
             this.presets.p1 = [];
             this.presets.p2 = [];
             this.presets.p3 = [];
         }
+
         if (data.lastActions) this.lastActions = data.lastActions;
         for (var x = 0; x < this.lastActions.length; x++) {
             if (!this.lastActions[x][6]) this.lastActions[x][6] = 0;
@@ -1008,6 +1021,17 @@ var autoBattle = {
         if (!this.presets.names) this.presets.names = ["Preset 1", "Preset 2", "Preset 3"];
         game.stats.saHighestLevel.valueTotal = this.maxEnemyLevel;
         this.resetCombat(true);
+    },
+    seal: function () {
+        this.sealed = true;
+        document.getElementById("autoBattleTab").style.display = "none";
+        cancelTooltip();
+    },
+    unseal: function () {
+        this.sealed = false;
+        document.getElementById("autoBattleTab").style.display = "table-cell";
+        tooltip("hide");
+        this.popup();
     },
     firstUnlock: function () {
         this.load();
@@ -1081,10 +1105,7 @@ var autoBattle = {
     getItemOrder: function () {
         var items = [];
         for (var item in this.items) {
-            items.push({
-                name: item,
-                zone: this.items[item].zone ? this.items[item].zone : 0,
-            });
+            items.push({ name: item, zone: this.items[item].zone ? this.items[item].zone : 0 });
         }
         function itemSort(a, b) {
             if (a.zone > b.zone) return 1;
@@ -1785,7 +1806,7 @@ var autoBattle = {
                     "% of your Attack Speed bar whenever you cause or receive a Bleed."
                 );
             },
-            upgrade: "+5% Bleed Chance, +2 Attack, +5% bar filled on Bleed",
+            upgrade: "+5% Bleed Chance, +2 Attack, +5% (up to +160%) bar filled on Bleed",
             attack: function () {
                 return 6 + this.level * 2;
             },
@@ -1796,7 +1817,9 @@ var autoBattle = {
                 return 25 + 5 * this.level;
             },
             barFill: function () {
-                return 0.2 + 0.05 * this.level;
+                var fill = 0.2 + 0.05 * this.level;
+                if (fill > 1.6) fill = 1.6;
+                return fill;
             },
             doStuff: function () {
                 autoBattle.trimp.bleedChance += this.bleedChance();
@@ -2025,7 +2048,7 @@ var autoBattle = {
                     "% Poison Resist, +3 Maximum Poison Stacks."
                 );
             },
-            upgrade: "+20% PermaShock Damage, +500 Health, 20% Poison Resist",
+            upgrade: "+20% PermaShock Damage, +1000 Health, 20% Poison Resist",
             shockMod: function () {
                 return 0.2 * this.level;
             },
@@ -2265,7 +2288,8 @@ var autoBattle = {
                 if (
                     autoBattle.items.Rusty_Dagger.equipped ||
                     autoBattle.items.Big_Cleaver.equipped ||
-                    autoBattle.items.Bag_of_Nails.equipped
+                    autoBattle.items.Bag_of_Nails.equipped ||
+                    autoBattle.items.Doppelganger_Diadem.equipped
                 ) {
                     autoBattle.enemy.baseHealth *= 0.75;
                     autoBattle.enemy.maxHealth *= 0.75;
@@ -2650,6 +2674,7 @@ var autoBattle = {
             startPrice: 15e5,
             priceMod: 20,
         },
+        //Dopp Diadem 250
         //Final calc items
         //After all shock resist
         Stormbringer: {
@@ -2797,7 +2822,7 @@ var autoBattle = {
                 if (autoBattle.items.Sacrificial_Shank.equipped) bleedChance = Math.floor(bleedChance * 0.75);
                 if (
                     bleedChance > autoBattle.enemy.bleedResist &&
-                    autoBattle.trimp.bleedTime > 0 &&
+                    (autoBattle.trimp.bleedTime > 0 || autoBattle.items.Doppelganger_Diadem.equipped) &&
                     autoBattle.trimp.bleedMod > 0
                 ) {
                     autoBattle.trimp.defense += this.defense();
@@ -3109,6 +3134,26 @@ var autoBattle = {
             startPrice: 200000,
             priceMod: 20,
         },
+        Doppelganger_Diadem: {
+            owned: false,
+            equipped: false,
+            hidden: false,
+            level: 1,
+            zone: 250,
+            description: function () {
+                return "Can create a Bleed on the Enemy for 10 seconds. 2x Attack if the Signet is equipped, x2 again if Doppelganger is alive. Doppelganger has 50% more health and can resurrect once per fight.";
+            },
+            doStuff: function () {
+                if (autoBattle.trimp.bleedTime <= 10000) autoBattle.trimp.bleedTime = 10000;
+                if (autoBattle.items.Doppelganger_Signet.equipped) {
+                    autoBattle.trimp.attack *= 2;
+                    if (!autoBattle.trimp.doppDown) autoBattle.trimp.attack *= 2;
+                    if (typeof autoBattle.trimp.doppLives === "undefined") autoBattle.trimp.doppLives = 1;
+                }
+            },
+            noUpgrade: true,
+            dustType: "shards",
+        },
         Doppelganger_Signet: {
             //actual final attack item
             owned: false,
@@ -3124,17 +3169,28 @@ var autoBattle = {
                 var damageDealt = autoBattle.enemy.dmgTaken;
                 autoBattle.damageCreature(autoBattle.enemy, damageDealt, false, true);
                 autoBattle.enemy.defense *= 0.5;
-                autoBattle.trimp.doppDown = true;
+                if (autoBattle.trimp.doppLives) autoBattle.trimp.doppLives--;
+                else autoBattle.trimp.doppDown = true;
+            },
+            doppHealth: function () {
+                var healthAmt = autoBattle.trimp.maxHealth;
+                if (autoBattle.items.Doppelganger_Diadem.equipped) {
+                    healthAmt *= 1.5;
+                    if (!autoBattle.trimp.doppLives) healthAmt *= 2;
+                }
+                return healthAmt;
+            },
+            explodeDmg: function () {
+                var damageAmt = autoBattle.enemy.dmgTaken;
+                if (autoBattle.items.Doppelganger_Diadem.equipped && autoBattle.trimp.doppLives == 1) damageAmt *= 3;
+                return damageAmt;
             },
             doStuff: function () {
                 if (autoBattle.trimp.doppDown) return;
                 autoBattle.trimp.attack *= 2;
                 autoBattle.trimp.damageTakenMult *= 0.5;
                 autoBattle.trimp.poisonRate++;
-                if (
-                    autoBattle.trimp.dmgTaken >= autoBattle.trimp.maxHealth ||
-                    autoBattle.enemy.dmgTaken >= autoBattle.enemy.health
-                )
+                if (autoBattle.trimp.dmgTaken >= this.doppHealth() || this.explodeDmg() >= autoBattle.enemy.health)
                     this.onDeath();
             },
             noUpgrade: true,
@@ -3161,6 +3217,87 @@ var autoBattle = {
             priceMod: 20,
             dustType: "shards",
         },
+        Gaseous_Greataxe: {
+            owned: false,
+            equipped: false,
+            hidden: false,
+            level: 1,
+            zone: 260,
+            dustMult: function () {
+                var mult = 0.75 + (this.level - 1) * 0.01;
+                if (mult > 1) mult = 1;
+                return mult;
+            },
+            description: function () {
+                return (
+                    "Multiplies your Poison Damage by your Bleed Damage or Shock Damage, whichever is higher. Doubles Poison Stack Rate. +" +
+                    prettify(this.maxStacks()) +
+                    " Max Poison Stacks. Every 10 seconds increases Max Poison stacks by 10% of this amount and increases Poison damage by 10% (compounding). Reduces Dust and Shard gains by " +
+                    Math.round((1 - this.dustMult()) * 100) +
+                    "%."
+                );
+            },
+            upgrade: "+20% more (compounding) Max Poison Stacks, -1% to Dust Penalty",
+            maxStacks: function () {
+                return Math.floor(100 * Math.pow(1.2, this.level - 1));
+            },
+            doStuff: function () {
+                var higherMod =
+                    autoBattle.trimp.shockMod > autoBattle.trimp.bleedMod
+                        ? autoBattle.trimp.shockMod
+                        : autoBattle.trimp.bleedMod;
+                if (higherMod < 1) higherMod = 1;
+                autoBattle.trimp.poisonMod *= higherMod;
+                var timeStacks = Math.floor(autoBattle.battleTime / 10000);
+                autoBattle.trimp.poisonMod *= Math.pow(1.1, timeStacks);
+                autoBattle.trimp.poisonStack += Math.floor(this.maxStacks() * ((timeStacks + 10) * 0.1));
+                autoBattle.trimp.poisonRate *= 2;
+            },
+            dustType: "shards",
+            startPrice: 1e10,
+            priceMod: 20,
+        },
+        The_Fibrillator: {
+            owned: false,
+            equipped: false,
+            hidden: false,
+            level: 1,
+            zone: 270,
+            description: function () {
+                return (
+                    "Multiplies Attack and Poison Damage by " +
+                    prettify(this.shockMod()) +
+                    "x. Adds " +
+                    prettify(this.shockMod() - 1) +
+                    " to this item's Attack and Poison Damage multplier for every 10 seconds the current shock on the enemy has lasted. Shocks last a minimum of 30 seconds (Overrides Sundering Scythe). Multiplies Health by " +
+                    prettify(this.healthMod()) +
+                    "x"
+                );
+            },
+            upgrade: "+0.05 to scaling Attack and Poison Multiplier, +0.25x Health",
+            shockMod: function () {
+                return 1.1 + (this.level - 1) * 0.05;
+            },
+            healthMod: function () {
+                return 2 + (this.level - 1) * 0.25;
+            },
+            doStuff: function () {
+                autoBattle.trimp.maxHealth *= this.healthMod();
+                var shockSeconds = 0;
+                if (autoBattle.enemy.shock.time > 0) {
+                    shockSeconds = (autoBattle.battleTime - autoBattle.enemy.shock.timeApplied) / 1000;
+                    shockSeconds = Math.floor(shockSeconds / 10);
+                    var shockMod = this.shockMod();
+                    var toAdd = (shockMod - 1) * shockSeconds;
+                    toAdd += shockMod;
+                    autoBattle.trimp.attack *= toAdd;
+                    autoBattle.trimp.poisonMod *= toAdd;
+                }
+            },
+            dustType: "shards",
+            startPrice: 1e12,
+            priceMod: 20,
+        },
     },
     bonuses: {
         Extra_Limbs: {
@@ -3181,6 +3318,7 @@ var autoBattle = {
             level: 0,
             price: 30000,
             priceMod: 3,
+            max: 50,
         },
         Stats: {
             description: function () {
@@ -3192,6 +3330,7 @@ var autoBattle = {
             level: 0,
             price: 20000,
             priceMod: 3,
+            max: 50,
         },
         Scaffolding: {
             description: function () {
@@ -3204,6 +3343,7 @@ var autoBattle = {
             price: 50,
             useShards: true,
             priceMod: 10,
+            max: 18,
         },
     },
     oneTimers: {
@@ -3370,6 +3510,9 @@ var autoBattle = {
 
         this.checkItems();
 
+        if (this.enemy.immune != "") {
+            this.trimp[this.enemy.immune + "Chance"] = 0;
+        }
         var trimpAttackTime = this.trimp.attackSpeed;
         if (this.trimp.lastAttack >= trimpAttackTime) {
             this.trimp.lastAttack -= trimpAttackTime;
@@ -3449,6 +3592,8 @@ var autoBattle = {
         }
 
         if (this.items.Sundering_Scythe.equipped && this.trimp.shockTime > 10000) this.trimp.shockTime = 10000;
+        if (this.items.The_Fibrillator.equipped && this.trimp.shockTime > 0 && this.trimp.shockTime < 30000)
+            this.trimp.shockTime = 30000;
         if (this.items.Blessed_Protector.equipped) this.items.Blessed_Protector.afterCheck(); //after anything that might hurt huffy
         if (this.items.Grounded_Crown.equipped) this.items.Grounded_Crown.afterCheck(); //just deals damage
         if (this.items.Haunted_Harpoon.equipped) this.items.Haunted_Harpoon.afterCheck(); //after anything that might increase the damage of huffy's bleeds
@@ -3592,6 +3737,7 @@ var autoBattle = {
             if (roll < shockChance) {
                 if (attacker.isTrimp && this.items.Eelimp_in_a_Bottle.equipped) defender.lastAttack = 0;
                 defender.shock.time = attacker.shockTime;
+                defender.shock.timeApplied = autoBattle.battleTime;
                 defender.shock.mod = attacker.shockMod;
                 defender.shock.count++;
             }
@@ -3687,6 +3833,10 @@ var autoBattle = {
         for (var x = 0; x < effectsCount; x++) {
             var roll = getRandomIntSeeded(seed++, 0, effects.length);
             var effect = effects[roll];
+            if (x == 0 && this.enemyLevel > 150) {
+                var immunities = ["Poison Immune", "Shock Immune", "Bleed Immune"];
+                effect = immunities[(this.enemyLevel - 151) % 3];
+            }
             if (!doubleResist && effect.search("Resistant") != -1) {
                 var offset = this.enemyLevel % 3;
                 roll = getRandomIntSeeded(seed++, 0, 100);
@@ -3770,6 +3920,18 @@ var autoBattle = {
                     if (!doubleResist || selectedEffects.indexOf("Poison Resistant") != -1)
                         effects.splice(effects.indexOf("Bleed Resistant"), 1);
                     break;
+                case "Poison Immune":
+                    this.enemy.immune = "poison";
+                    effects.splice(effects.indexOf("Poison Resistant"), 1);
+                    break;
+                case "Shock Immune":
+                    this.enemy.immune = "shock";
+                    effects.splice(effects.indexOf("Shock Resistant"), 1);
+                    break;
+                case "Bleed Immune":
+                    this.enemy.immune = "bleed";
+                    effects.splice(effects.indexOf("Bleed Resistant"), 1);
+                    break;
                 case "Defensive":
                     this.enemy.defense += Math.ceil(this.enemy.level * 0.75 * Math.pow(1.05, this.enemy.level));
                     break;
@@ -3847,6 +4009,9 @@ var autoBattle = {
         if (this.items.Lifegiving_Gem.equipped) {
             amt *= 1 + this.items.Lifegiving_Gem.dustIncrease();
         }
+        if (this.items.Gaseous_Greataxe.equipped) {
+            amt *= this.items.Gaseous_Greataxe.dustMult();
+        }
         amt += this.trimp.dustMult;
         if (this.oneTimers.Dusty_Tome.owned) {
             amt *= 1 + 0.05 * (this.maxEnemyLevel - 1);
@@ -3900,14 +4065,21 @@ var autoBattle = {
         }
         this.lootAvg.accumulator += amt;
         this.lootAvg.counter += this.battleTime;
-        if (this.enemy.level == this.maxEnemyLevel && this.speed == 1 && this.maxEnemyLevel < 150) {
+        if (this.enemy.level == this.maxEnemyLevel && this.speed == 1 && this.maxEnemyLevel <= 160) {
             this.enemiesKilled++;
             if (this.enemiesKilled >= this.nextLevelCount()) {
-                this.maxEnemyLevel++;
-                game.stats.saHighestLevel.valueTotal = this.maxEnemyLevel;
-                if (this.autoLevel) this.enemyLevel++;
-                this.enemiesKilled = 0;
-                this.resetStats();
+                if (this.maxEnemyLevel == 160) {
+                    this.bonuses.Radon.level = 52;
+                    this.bonuses.Stats.level = 52;
+                    this.bonuses.Scaffolding.level = 20;
+                    this.canSeal = true;
+                } else {
+                    this.maxEnemyLevel++;
+                    game.stats.saHighestLevel.valueTotal = this.maxEnemyLevel;
+                    if (this.autoLevel) this.enemyLevel++;
+                    this.enemiesKilled = 0;
+                    this.resetStats();
+                }
             }
         }
         if (this.sessionEnemiesKilled > this.sessionTrimpsKilled)
@@ -3922,6 +4094,7 @@ var autoBattle = {
     },
     update: function () {
         if (game.global.highestRadonLevelCleared < 74) return;
+        if (this.sealed) return;
         if (usingRealTimeOffline && this.speed > 1) {
             this.settings.practice.enabled = 0;
             this.speed = 1;
@@ -3996,6 +4169,7 @@ var autoBattle = {
     buyBonus: function (what) {
         var bonus = this.bonuses[what];
         var cost = this.getBonusCost(what);
+        if (bonus.max && bonus.level >= bonus.max) return;
         if (bonus.useShards) {
             if (this.shards < cost) return;
             this.shards -= cost;
@@ -4022,7 +4196,8 @@ var autoBattle = {
         this.saveLastAction("oneTimer", what, cost);
         this.popup(true, false, true);
     },
-    hoverItem: function (item, upgrade) {
+    hoverItem: function (item, upgrade, event) {
+        if (event && event.key && event.key != "?") return; // Screenreader tooltip support
         var itemObj = this.items[item];
         if (!itemObj) return;
         if (upgrade) {
@@ -4302,8 +4477,8 @@ var autoBattle = {
         return modObj.baseGain * this.rings.level * Math.pow(modObj.perTen, Math.floor(this.rings.level / 10));
     },
     getRingSlots: function () {
-        var amt = Math.floor((this.rings.level - 5) / 10) + 1;
-        if (amt > 2) amt = 2;
+        var amt = Math.floor(this.rings.level / 15) + 1;
+        if (amt > 3) amt = 3;
         return amt;
     },
     levelRing: function () {
@@ -4312,13 +4487,17 @@ var autoBattle = {
         this.saveLastAction("ring", null, cost);
         this.shards -= cost;
         this.rings.level++;
+
+        this.checkAddRingSlot();
+        this.popup(false, false, true);
+    },
+    checkAddRingSlot: function () {
         var slots = this.getRingSlots();
         if (this.rings.mods.length < slots) {
             var availableMods = this.getAvailableRingMods();
             var randomMod = availableMods[Math.floor(Math.random() * availableMods.length)];
             this.rings.mods.push(randomMod);
         }
-        this.popup(false, false, true);
     },
     getAvailableRingMods: function () {
         var availableMods = [];
@@ -4383,11 +4562,12 @@ var autoBattle = {
                 text += "</select>";
             }
             if (this.rings.level < 15) text += "Unlock another slot at Level 15!";
+            else if (this.rings.level < 30) text += "Unlock another slot at level 30!";
         }
         text +=
-            "</div><div class='ringContainer' style='text-align: center; padding-top: 2em;'><span class='btn btn-lg autoItemUpgrade' onclick='autoBattle.levelRing()' style='width: 90%'>Level Up! (" +
+            "</div><div class='ringContainer' style='text-align: center; padding-top: 2em;'><button class='btn btn-lg autoItemUpgrade' onclick='autoBattle.levelRing()' style='width: 90%'>Level Up! (" +
             prettify(this.getRingLevelCost()) +
-            " Shards)</span><br/>";
+            " Shards)</button><br/>";
         text +=
             "Every level increases stats of all mods on The Ring.<br/>Every 10 levels, gains a bigger boost in power!<br/>";
         if (this.rings.level < 10) text += "Gains status chance starting at Level 10.<br/>";
@@ -4464,6 +4644,7 @@ var autoBattle = {
             var cost = this.getBonusCost(bonus);
             var costColor =
                 (!bonusObj.useShards && cost <= this.dust) || (bonusObj.useShards && cost <= this.shards) ? "green" : "red";
+            if (bonusObj.max && bonusObj.level >= bonusObj.max) costColor = "red";
             var elem = document.getElementById(bonus + "BonusPrice");
             if (!elem) return false;
             elem.className = costColor;
@@ -4490,6 +4671,9 @@ var autoBattle = {
     },
     hideMode: false,
     popup: function (updateOnly, statsOnly, itemsOnly, leaveMode, fromBattle) {
+        // !game.global.lockTooltip does not work as expected with screenreaders, but checking to see if SA is the last tooltip and if there is a tooltip displayed is effectively the same thing for both (I think? I hope? It looks like it is.)
+        // Figuring out why lockTooltip acts inappropriately on SR version is the better solution, but the tooltip code scares me. A lot.
+        let SAActive = lastTooltipTitle == "Spire Assault" && document.getElementById("tooltipDiv").style.display == "block";
         if (fromBattle) {
             if (this.popupMode == "bonuses" && !this.updateBonusPrices()) {
                 itemsOnly = true;
@@ -4504,7 +4688,8 @@ var autoBattle = {
             this.hideMode = false;
             this.confirmUndo = false;
         }
-        if ((updateOnly || itemsOnly) && (lastTooltipTitle != "Spire Assault" || !game.global.lockTooltip)) return;
+
+        if ((updateOnly || itemsOnly) && !SAActive) return;
         if (usingRealTimeOffline) {
             cancelTooltip();
             return;
@@ -4526,7 +4711,12 @@ var autoBattle = {
                 }
             }
         }
-        var topText =
+        var topText = "";
+        if (this.canSeal) {
+            topText +=
+                "<div class='sealAutoBattle'>Huffy can go no further up the Spire but can now Seal it to prevent any more Enemies from escaping. All bonuses have been set to 2 levels above their maximum. Congratulations on completing Spire Assault!!! <span onclick='autoBattle.seal()' class='autoItem autoItemEquipped' style='width: initial'>Seal Spire Assault (Can reopen at any time in settings)</span></div>";
+        }
+        topText +=
             prettify(this.dust) +
             " Dust (" +
             prettify(dustPs) +
@@ -4536,7 +4726,7 @@ var autoBattle = {
             (this.settings.practice.enabled == 1
                 ? "<b style='color: #921707'>Practicing</b>"
                 : this.enemyLevel == this.maxEnemyLevel
-                  ? this.maxEnemyLevel == 150
+                  ? this.canSeal
                       ? "Farming (Max Level)"
                       : "Kill " + (this.nextLevelCount() - this.enemiesKilled)
                   : "Farming") +
@@ -4554,7 +4744,7 @@ var autoBattle = {
 
         if (!(updateOnly && statsOnly))
             buttons =
-                "<div id='abLevelButtons'><span id='abDecreaseLevel' onclick='autoBattle.levelDown()' class='btn-md btn auto'>- Decrease Enemy Level -</span><span onclick='autoBattle.toggleAutoLevel()' id='abAutoLevel' class='btn btn-md auto'>Set AutoLevel On</span><span onclick='autoBattle.levelUp()' id='abIncreaseLevel' class='btn btn-md auto'>+ Increase Enemy Level +</span><span id='abHelpBtn' onclick='autoBattle.help()' class='icomoon icon-question-circle'></span><span id='abCloseBtn' onclick='cancelTooltip()' class='icomoon icon-close'></span></div>";
+                "<div id='abLevelButtons'><button id='abDecreaseLevel' onclick='autoBattle.levelDown()' class='btn-md btn auto noselect'>- Decrease Enemy Level -</button><button onclick='autoBattle.toggleAutoLevel()' id='abAutoLevel' class='btn btn-md auto'>Set AutoLevel On</button><button onclick='autoBattle.levelUp()' id='abIncreaseLevel' class='btn btn-md auto'>+ Increase Enemy Level +</button><button aria-label='Help' id='abHelpBtn' onclick='autoBattle.help()' class='icomoon icon-question-circle'></button><button aria-label='Close' id='abCloseBtn' onclick='cancelTooltip()' class='icomoon icon-close'></button></div>";
         text =
             "<div class='noselect'><div id='autoDust'>" +
             topText +
@@ -4736,7 +4926,9 @@ var autoBattle = {
                 (fighterObj.poisonMod > freePmod && (!ringPoison || ringPoison + freePmod < fighterObj.poisonMod))
             ) {
                 statsText += "<span class='abError'>";
-                if (fighterObj.poisonTime <= 0)
+                if (fighterObj.poisonChance <= 0 && opponentObj.immune == "poison")
+                    statsText += "Enemy is immune to Poison!";
+                else if (fighterObj.poisonTime <= 0)
                     statsText += "*You need an item that can create a Poison (Like Fists of Goo) to Poison.";
                 else if (
                     fighterObj.poisonChance <= 0 &&
@@ -4761,7 +4953,8 @@ var autoBattle = {
                 (fighterObj.bleedMod > 0 && (!ringBleedShock || ringBleedShock / 100 < fighterObj.bleedMod))
             ) {
                 statsText += "<span class='abError'>";
-                if (fighterObj.bleedTime <= 0)
+                if (fighterObj.bleedChance <= 0 && opponentObj.immune == "bleed") statsText += "Enemy is immune to Bleed!";
+                else if (fighterObj.bleedTime <= 0)
                     statsText += "*You need an item that can create a Bleed (Like Rusty Dagger) to cause Bleeding.";
                 else if (fighterObj.bleedChance <= 0)
                     statsText += "*You need an item that grants Bleed Chance to cause Bleeding.";
@@ -4785,7 +4978,8 @@ var autoBattle = {
                 (fighterObj.shockMod > 0 && (!ringBleedShock || ringBleedShock / 100 < fighterObj.shockMod))
             ) {
                 statsText += "<span class='abError'>";
-                if (fighterObj.shockTime <= 0 && !this.items.Nozzled_Goggles.equipped)
+                if (fighterObj.shockChance <= 0 && opponentObj.immune == "shock") statsText += "Enemy is immune to Shock!";
+                else if (fighterObj.shockTime <= 0 && !this.items.Nozzled_Goggles.equipped)
                     statsText += "*You need an item that can create a Shock (Like Battery Stick) to Shock.";
                 else if (fighterObj.shockChance <= 0) statsText += "*You need an item that grants Shock Chance to Shock.";
                 else if (fighterObj.shockMod <= 0) statsText += "*You need an item that grants Shock Damage to Shock.";
@@ -4796,8 +4990,12 @@ var autoBattle = {
                 if (this.items.Doppelganger_Signet.equipped) {
                     statsText += "Doppelganger ";
                     if (this.trimp.doppDown) statsText += " Dead!";
-                    else statsText += "Health: " + prettify(this.trimp.maxHealth - this.trimp.dmgTaken);
-                    statsText += "&nbsp;&nbsp;&nbsp;&nbsp;";
+                    else
+                        statsText +=
+                            "Health: " + prettify(autoBattle.items.Doppelganger_Signet.doppHealth() - this.trimp.dmgTaken);
+                    if (this.trimp.doppLives == 1)
+                        statsText += "&nbsp;<span class='icomoon icon-heart3'></span>&nbsp;&nbsp;";
+                    else statsText += "&nbsp;&nbsp;&nbsp;&nbsp;";
                 }
                 if (this.items.Goo_Golem.equipped && this.items.Goo_Golem.active()) {
                     statsText += "Goo Golem: " + prettify(this.trimp.gooStored) + " Stored";
@@ -4844,19 +5042,19 @@ var autoBattle = {
         text += "<div id='autoBattleStatsText'>" + statsText + "</div>";
         var itemsText = "Items (" + this.countEquippedItems() + "/" + this.getMaxItems() + " Equipped)";
         text +=
-            "<div id='autoBattleMenuButtons'><span id='abItemsBtn' onclick='autoBattle.swapPopup(\"items\")' class='btn btn-lg autoItemUpgrade darkBorder'>" +
+            "<div id='autoBattleMenuButtons'><button id='abItemsBtn' onclick='autoBattle.swapPopup(\"items\")' class='btn btn-lg autoItemUpgrade darkBorder'>" +
             itemsText +
-            "</span><span onclick='autoBattle.swapPopup(\"bonuses\")' class='btn btn-lg colorNavy'>Bonuses</span><span onclick='autoBattle.swapPopup(\"contracts\")' class='btn btn-lg colorVoidy darkBorder'>Contracts</span><span onclick='autoBattle.swapPopup(\"hidden\")' class='btn btn-lg autoColorOrange darkBorder'>Hidden Items</span><span class='btn btn-lg autoItemHide darkBorder' onclick='autoBattle.toggleHideMode()'>Hide Items</span>";
+            "</button><button onclick='autoBattle.swapPopup(\"bonuses\")' class='btn btn-lg colorNavy'>Bonuses</button><button onclick='autoBattle.swapPopup(\"contracts\")' class='btn btn-lg colorVoidy darkBorder'>Contracts</button><button onclick='autoBattle.swapPopup(\"hidden\")' class='btn btn-lg autoColorOrange darkBorder'>Hidden Items</button><button class='btn btn-lg autoItemHide darkBorder' onclick='autoBattle.toggleHideMode()'>Hide Items</button>";
         text +=
-            "<span id='autoBattleRingBtn' onclick='autoBattle.swapPopup(\"rings\")' style='display: " +
+            "<button id='autoBattleRingBtn' onclick='autoBattle.swapPopup(\"rings\")' style='display: " +
             (this.oneTimers.The_Ring.owned ? "inline-block" : "none") +
-            "' class='btn btn-lg autoColorTeal active darkBorder'>The Ring</span>";
+            "' class='btn btn-lg autoColorTeal active darkBorder'>The Ring</button>";
         text +=
-            "<span onclick='autoBattle.swapPopup(\"other\")' class='btn btn-lg autoColorGrey active darkBorder'>Misc</span></div>";
+            "<button onclick='autoBattle.swapPopup(\"other\")' class='btn btn-lg autoColorGrey active darkBorder'>Misc</button></div>";
         var notesElem = document.getElementById("autoBattleNotes");
         if (!notesElem || !itemsOnly)
             text +=
-                "<div id='autoBattleNotes'" +
+                "<div aria-live='polite' id='autoBattleNotes'" +
                 (this.popupMode == "items" || this.popupMode == "hidden" ? "" : " style='display: none'") +
                 ">" +
                 this.notes +
@@ -4874,9 +5072,9 @@ var autoBattle = {
             swapClass("mode", extraClass, itemsElem);
         }
         if (this.popupMode == "items" || this.popupMode == "hidden") {
+            text += "<h1 class='visually-hidden'>Spire Assault Items</h1>";
             var itemList = this.getItemOrder();
-            var line1 = "";
-            var line2 = "";
+            var line = "";
             var count = 1;
             var total = 0;
             for (x = 0; x < itemList.length; x++) {
@@ -4885,20 +5083,26 @@ var autoBattle = {
                 if (!itemObj.owned) continue;
                 if (itemObj.hidden != (this.popupMode == "hidden")) continue;
                 if (count > 7) {
-                    text += "<div>" + line1 + "</div><div>" + line2 + "</div>";
-                    line1 = "";
-                    line2 = "";
+                    text += "<div>" + line + "</div>";
+                    line = "";
                     count = 1;
                 }
 
                 var equipClass = itemObj.equipped ? "Equipped" : "NotEquipped";
+
                 var upgradeCost = prettify(this.upgradeCost(item)) + " " + this.getCurrencyName(item);
-                line1 +=
-                    "<div class='autoItem autoItem" +
+                line +=
+                    "<div class='autoItemContainer'><div tabindex=0 id='itemName" +
+                    item +
+                    "' class='autoItem autoItem" +
                     equipClass +
+                    "' role=checkbox aria-checked='" +
+                    itemObj.equipped +
                     "' onclick='autoBattle.equip(\"" +
                     item +
-                    "\")' onmouseover='autoBattle.hoverItem(\"" +
+                    "\")' onkeydown='autoBattle.hoverItem(\"" +
+                    item +
+                    "\", false, event)' onmouseover='autoBattle.hoverItem(\"" +
                     item +
                     "\")'>" +
                     this.cleanName(item) +
@@ -4906,52 +5110,60 @@ var autoBattle = {
                     "</div>";
                 if (this.popupMode == "items") {
                     if (this.hideMode)
-                        line2 += "<div class='autoItem autoItemHide' onclick='autoBattle.hide(\"" + item + "\")'>Hide</div>";
-                    else if (itemObj.noUpgrade) line2 += "<div class='autoItem autoColorGrey'>Unupgradable</div>";
-                    else
-                        line2 +=
-                            "<div class='autoItem autoItemUpgrade' onclick='autoBattle.upgrade(\"" +
+                        line +=
+                            "<button class='autoItem autoItemHide' onclick='autoBattle.hide(\"" +
                             item +
-                            "\")' onmouseover='autoBattle.hoverItem(\"" +
+                            "\")'>Hide</button>";
+                    else if (itemObj.noUpgrade)
+                        line += "<button class='autoItem autoColorGrey' aria-disabled=true>Unupgradable</button>";
+                    else
+                        line +=
+                            "<button id='itemUpgrade" +
+                            item +
+                            "'class='autoItem autoItemUpgrade' onclick='autoBattle.upgrade(\"" +
+                            item +
+                            "\")' onkeydown='autoBattle.hoverItem(\"" +
+                            item +
+                            "\", true, event)' onmouseover='autoBattle.hoverItem(\"" +
                             item +
                             "\", true)'>Upgrade (" +
                             upgradeCost +
-                            ")</div>";
+                            ")</button>";
                 } else if (this.popupMode == "hidden")
-                    line2 +=
-                        "<div class='autoItem autoItemRestore' onclick='autoBattle.restore(\"" + item + "\")'>Restore</div>";
+                    line +=
+                        "<button class='autoItem autoItemRestore' onclick='autoBattle.restore(\"" +
+                        item +
+                        "\")'>Restore</button>";
+                line += "</div>";
                 count++;
                 total++;
             }
             if (total == 0) {
                 if (this.popupMode == "hidden")
-                    line1 +=
+                    line +=
                         "<br/><b style='color: white; padding: 2%;'>You have no hidden items right now, but can hide items you're no longer using using the 'Hide Items' button above.</b>";
-                else line1 += "<br/><b>All of your items are hidden!</b>";
+                else line += "<br/><b>All of your items are hidden!</b>";
             }
 
-            text += "<div>" + line1 + "</div><div>" + line2 + "</div><br/></div>";
+            text += "<div>" + line + "</div><br/></div>";
         } else if (this.popupMode == "bonuses") {
             for (var bonus in this.bonuses) {
                 var bonusObj = this.bonuses[bonus];
                 if (bonusObj.useShards && this.maxEnemyLevel < 51) continue;
                 var cost = this.getBonusCost(bonus);
-                var costText =
+                var costTextColor =
                     (!bonusObj.useShards && cost <= this.dust) || (bonusObj.useShards && cost <= this.shards)
                         ? "green"
                         : "red";
-                costText =
-                    "<span id='" +
-                    bonus +
-                    "BonusPrice' class='" +
-                    costText +
-                    "'>" +
-                    prettify(cost) +
-                    " " +
-                    (bonusObj.useShards ? "Shards" : "Dust") +
-                    "</span>";
+                var costText = prettify(cost) + " " + (bonusObj.useShards ? "Shards" : "Dust");
+                if (bonusObj.max && bonusObj.level >= bonusObj.max) {
+                    costTextColor = "red";
+                    costText = "Max Level!";
+                }
+                costText = "<span id='" + bonus + "BonusPrice' class='" + costTextColor + "'>" + costText + "</span>";
+                var maxLevel = bonusObj.max ? "Max Level " + bonusObj.max : "Unlimited Purchases";
                 text +=
-                    "<div id='" +
+                    "<button id='" +
                     bonus +
                     "BonusBox' onclick='autoBattle.buyBonus(\"" +
                     bonus +
@@ -4963,7 +5175,9 @@ var autoBattle = {
                     costText +
                     "<br/>" +
                     bonusObj.description() +
-                    "<br/>Unlimited Purchases</div>";
+                    "<br/>" +
+                    maxLevel +
+                    "</button>";
             }
             var oneCount = 0;
             var ownedItems = this.countOwnedItems();
@@ -4997,7 +5211,7 @@ var autoBattle = {
                         " to reveal this bonus!</div>";
                 } else
                     text +=
-                        "<div onclick='autoBattle.buyOneTimer(\"" +
+                        "<button onclick='autoBattle.buyOneTimer(\"" +
                         oneTime +
                         "\")' class='autoBonusBox autoOneTimerNotOwned'>" +
                         this.cleanName(oneTime) +
@@ -5005,7 +5219,7 @@ var autoBattle = {
                         costText +
                         "<br/>" +
                         oneObj.description +
-                        "</div>";
+                        "</button>";
             }
             text += "<br/>";
             for (var oneTime in this.oneTimers) {
@@ -5048,10 +5262,10 @@ var autoBattle = {
                     "</div>";
                 if (accepted)
                     text +=
-                        "<span onclick='autoBattle.abandonContract()' class='btn btn-lg autoItemHide'>Abandon and Refund</span>";
+                        "<button onclick='autoBattle.abandonContract()' class='btn btn-lg autoItemHide'>Abandon and Refund</button>";
                 else if (!this.activeContract)
                     text +=
-                        "<span onclick='autoBattle.acceptContract(\"" +
+                        "<button onclick='autoBattle.acceptContract(\"" +
                         item +
                         "\")' class='btn btn-lg colorVoidy'>Accept (" +
                         prettify(this.contractPrice(item)) +
@@ -5059,7 +5273,7 @@ var autoBattle = {
                         this.getCurrencyName(item) +
                         ", Complete a Z" +
                         itemObj.zone +
-                        " Void Map)</span>";
+                        " Void Map)</button>";
                 else text += "<span class='btn btn-lg autoColorGrey'>Other Contract in Progress</span>";
                 text += "</div>";
             }
@@ -5082,23 +5296,24 @@ var autoBattle = {
                 if (typeof thisSetting.hideUnless !== "undefined" && !thisSetting.hideUnless()) continue;
                 var className = thisSetting.enabled ? "autoItemEquipped" : "autoItemHide";
                 text +=
-                    "<span class='btn btn-md " +
+                    "<button class='btn btn-md " +
                     className +
                     "' onclick='autoBattle.toggleSetting(\"" +
                     setting +
                     "\")'>" +
                     thisSetting.text[thisSetting.enabled] +
-                    "</span>";
+                    "</button>";
             }
             text += "</div>";
             text += "<div class='abMiscBox'><b style='font-size: 1.1em;'>Undo last change</b><br/>";
             var action = this.lastActions[this.lastActions.length - 1];
             if (action) {
                 if (!this.confirmUndo)
-                    text += "<span class='btn autoItemUpgrade btn-md' onclick='autoBattle.confirmUndoClicked()'>Undo</span>";
+                    text +=
+                        "<button class='btn autoItemUpgrade btn-md' onclick='autoBattle.confirmUndoClicked()'>Undo</button>";
                 else
                     text +=
-                        "<b>Are you sure?!</b><br/><span class='btn autoItemUpgrade btn-md' onclick='autoBattle.restoreLastAction()'>Yes, Undo</span><span class='btn autoItemHide btn-md' onclick='autoBattle.confirmUndoClicked()'>No, Cancel</span>";
+                        "<b>Are you sure?!</b><br/><button class='btn autoItemUpgrade btn-md' onclick='autoBattle.restoreLastAction()'>Yes, Undo</button><button class='btn autoItemHide btn-md' onclick='autoBattle.confirmUndoClicked()'>No, Cancel</button>";
                 text += "<br/>";
                 if (action[0] == "ring") {
                     text += "Downgrade your ring by " + action[5] + " level" + needAnS(action[5]);
@@ -5121,16 +5336,18 @@ var autoBattle = {
                 text +=
                     "<div class='abMiscBox preset'><b style='font-size: 1.1em;'>" + this.presets.names[x - 1] + "</b><br/>";
                 text +=
-                    "<span class='btn autoItemEquipped btn-md' onclick='autoBattle.savePreset(\"p" + x + "\")'>Save</span>";
+                    "<button class='btn autoItemEquipped btn-md' onclick='autoBattle.savePreset(\"p" +
+                    x +
+                    "\")'>Save</button>";
                 if (preset.length)
                     text +=
-                        "<span class='btn autoItemUpgrade btn-md' onclick='autoBattle.loadPreset(\"p" +
+                        "<button class='btn autoItemUpgrade btn-md' onclick='autoBattle.loadPreset(\"p" +
                         x +
-                        "\")'>Load</span>";
+                        "\")'>Load</button>";
                 text +=
-                    '<span class=\'btn autoColorOrange btn-md\' onclick=\'tooltip("Rename SA Preset", null, "update", ' +
+                    '<button class=\'btn autoColorOrange btn-md\' onclick=\'tooltip("Rename SA Preset", null, "update", ' +
                     x +
-                    ")'>Rename</span>";
+                    ")'>Rename</button>";
                 text += "<div class='presetItems'>";
                 var pname = "p" + x;
                 var preset = this.presets[pname];
@@ -5139,10 +5356,13 @@ var autoBattle = {
                     if (Array.isArray(preset[y])) {
                         if (preset[y][0] == "level" && this.settings.loadLevel.enabled) text += ". Level " + preset[y][1];
                         if (preset[y][0] == "ring" && this.settings.loadRing.enabled) {
-                            text += ". Ring: ";
-                            for (var z = 1; z < preset[y].length; z++) {
-                                if (z != 1) text += ", ";
-                                text += autoBattle.ringStats[preset[y][z]].name;
+                            text += ". Ring";
+                            if (autoBattle.rings.level >= 5) {
+                                text += ": ";
+                                for (var z = 1; z < preset[y].length; z++) {
+                                    if (z != 1) text += ", ";
+                                    text += this.ringStats[preset[y][z]].name;
+                                }
                             }
                         }
                         continue;
@@ -5304,6 +5524,62 @@ var u2Mutations = {
             color: "#b307b3",
             description: "Gain +50% Health in U2.",
             purchased: false,
+        },
+        Trimps: {
+            pos: [1, 10],
+            dn: "Small Trimps",
+            color: "#b307b3",
+            require: ["Health"],
+            description: "50% more Trimps can fit in housing in U2.",
+            purchased: false,
+        },
+        Tauntimps: {
+            pos: [6, 12],
+            dn: "Tauntimp Farming",
+            color: "#b307b3",
+            require: ["Trimps"],
+            description:
+                "Every 10 Zones in U2, if you have seen fewer Tauntimps in your run than expected, breed the missing amount instantly. Expect 2 more Tauntimps than usual every 10 Zones.",
+            purchased: false,
+            check: function () {
+                if (game.global.universe != 2 || !this.purchased) return;
+                if (game.global.world % 10 != 0) return;
+                checkAverageExotics("Tauntimp");
+            },
+        },
+        AvgExotic: {
+            pos: [14, 15],
+            dn: "Master Farmer",
+            color: "#b307b3",
+            require: ["Tauntimps"],
+            description:
+                "Every 10 Zones in U2 starting at Zone 15, if you have seen fewer Whipimps, Venimps, or Magnimps in your run than expected, breed the missing amount instantly. Expect 2 more of each than usual every 10 Zones",
+            purchased: false,
+            ring: 1,
+            check: function () {
+                if (game.global.universe != 2 || !this.purchased || game.global.world < 15) return;
+                if (game.global.world % 10 != 5) return;
+                var venimp = checkAverageExotics("Venimp");
+                var whipimp = checkAverageExotics("Whipimp");
+                var magnimp = checkAverageExotics("Magnimp");
+                if (venimp + whipimp + magnimp > 0) {
+                    var text =
+                        "Your Trimps noticed that they had seen fewer Exotic Imports than they'd like this run, so they bred some more! Gained " +
+                        venimp +
+                        " Venimp" +
+                        needAnS(venimp) +
+                        ", " +
+                        whipimp +
+                        " Whipimp" +
+                        needAnS(whipimp) +
+                        ", and " +
+                        magnimp +
+                        " Magnimp" +
+                        needAnS(magnimp) +
+                        ".";
+                    message(text, "Loot", "gift", "exotic", "exotic");
+                }
+            },
         },
         Attack: {
             pos: [3, 7],
@@ -5479,6 +5755,10 @@ var u2Mutations = {
             require: ["Smashing2"],
             get description() {
                 var mult = canU2Overkill(true);
+                if (!this.purchased) {
+                    mult += 0.1;
+                    if (u2Mutations.tree.Liq2.purchased) mult += 0.1;
+                }
                 var text = "Your Overkill Zones no longer start until after Liquification.";
                 if (u2Mutations.tree.Overkill1.purchased)
                     text +=
@@ -5587,6 +5867,23 @@ var u2Mutations = {
             purchased: false,
             ring: 1,
         },
+        Randimp1: {
+            pos: [5, -14],
+            dn: "Randimp",
+            color: "#377cff",
+            require: ["RandLoot"],
+            description: "Randimps now give the loot of two different Exotic Imports when found.",
+            purchased: false,
+        },
+        Randimp2: {
+            pos: [5, -19],
+            dn: "Really Randimp",
+            color: "#377cff",
+            require: ["Randimp1"],
+            description: "Randimps now give the loot of three different Exotic Imports when found.",
+            purchased: false,
+            ring: 1,
+        },
     },
     purchase: function (what) {
         var obj = this.tree[what];
@@ -5618,7 +5915,10 @@ var u2Mutations = {
             updateTalentNumbers();
         } else {
             const seedCount = document.getElementById("talentsEssenceTotal");
-            const seedText = game.options.menu.masteryTab.enabled === 2 ? ` (${prettify(game.global.mutatedSeeds)})` : "";
+            const seedText =
+                game.options.menu.masteryTab.enabled == 2 || (game.options.menu.masteryTab.enabled == 3 && alertText != "!")
+                    ? " (" + prettify(game.global.mutatedSeeds) + ")"
+                    : "";
             if (seedCount.innerHTML !== seedText) seedCount.innerHTML = seedText;
         }
     },
@@ -5643,6 +5943,7 @@ var u2Mutations = {
         var cost = getNextTalentCost();
         if (cost == -1) return "";
         if (game.global.essence >= cost) return '&nbsp;<span class="alert badge">!</span>&nbsp;&nbsp;';
+        return "";
     },
     toggleRespec: function (displayOnly, forceHide) {
         var mutRespecBtn = document.getElementById("respecMutatorsBtn");
@@ -5727,6 +6028,7 @@ var u2Mutations = {
         var arrowLength = 0.5;
         var arrowSize = 0.1;
         var boxScale = 2 * scale;
+        screenReaderAssert("Press Shift S to return to the top of the Mutator screen");
 
         document.getElementById("mutTreeWrapper").style.display = "block";
         document.getElementById("wrapper").style.display = "none";
@@ -5737,15 +6039,15 @@ var u2Mutations = {
                 : "All Mutators Purchased!";
         var curTransform = this.curTransform ? " style='transform: " + this.curTransform + ";'" : "";
         var text =
-            "<div style='position: relative; z-index:2;'><div style='position: absolute; top: 2%; left: 2%; display: inline-block;'><span style='font-size: 1.1em; margin-left: 0.25em;' class='btn btn-lg btn-info' onclick='u2Mutations.showNames()' id='u2MutShowNameBtn'>" +
+            "<hr class='visually-hidden' title='top of tooltip'/><div style='position: relative; z-index:2;'><div id='mutMenu' aria-owns='masteryInfo' style='position: absolute; top: 2%; left: 2%; display: inline-block;'><span aria-hidden=true style='font-size: 1.1em; margin-left: 0.25em;' class='btn btn-lg btn-info' onclick='u2Mutations.showNames()' id='u2MutShowNameBtn'>" +
             (game.global.showU2MutNames ? "Hide Names" : "Show Names") +
-            "</span><br/><span style='font-size: 1.1em; margin-top: 0.25em;' id='swapToMasteryBtn' class='btn btn-lg btn-success' onclick='u2Mutations.swapTab(false)'>Show Masteries" +
+            "</span><br/><span tabindex=0 role=button style='font-size: 1.1em; margin-top: 0.25em;' id='swapToMasteryBtn' class='btn btn-lg btn-success' onclick='u2Mutations.swapTab(false)'>Show Masteries" +
             this.getMasteryAlert() +
-            "</span></div><div style='background-color: black'>Seeds Available: " +
+            "</span></div><div id='mutSeedCounter' style='background-color: black'>Seeds Available: " +
             prettify(game.global.mutatedSeeds) +
             "&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;" +
             costText +
-            "</div><span id='mutTreeCloseBtn' class='icomoon icon-close' onclick='u2Mutations.closeTree()'></span></div><div id='mutTree'" +
+            "</div><span role=button tabindex=0 aria-label='close' id='mutTreeCloseBtn' class='icomoon icon-close' onclick='u2Mutations.closeTree()'></span></div><div id='mutTree'" +
             curTransform +
             ">";
         text +=
@@ -5758,19 +6060,32 @@ var u2Mutations = {
             "px; left: " +
             -20.4 * scale +
             "px;'></div>";
+        const headers = {
+            Scruffy: "Scruffy and Heirlooms",
+            Health: "Combat, Radon, and Imports",
+            MaZ: "Resources",
+            Overkill1: "Speed",
+        };
         for (var item in this.tree) {
             var coords = this.tree[item].pos;
             var itemObj = this.tree[item];
             var bgColor = "available";
             if (itemObj.purchased) bgColor = "purchased";
             else if (!this.checkRequirements(item)) bgColor = "requirement";
+            var SRBuyText = `${bgColor == "requirement" ? "requirement not met" : bgColor}`;
             var dn = itemObj.dn ? itemObj.dn : item;
+            if (usingScreenReader && item in headers) text += `<h1 class='visually-hidden'>${headers[item]}</h1>`;
+            let tooltip = usingScreenReader
+                ? ""
+                : "onmouseover=\"tooltip('" + item + "', 'Mutator', event)\" onmouseout=\"tooltip('hide')\"";
             text +=
-                "<div onclick=\"u2Mutations.purchase('" +
+                '<button aria-labelledby="' +
                 item +
-                "')\" onmouseover=\"tooltip('" +
+                'Name" onclick="u2Mutations.purchase(\'' +
                 item +
-                "', 'Mutator', event)\" onmouseout=\"tooltip('hide')\" id=\"" +
+                "')\" " +
+                tooltip +
+                ' id="' +
                 item +
                 'MutatorBox" class="mutatorBox mutatorBox' +
                 bgColor +
@@ -5787,8 +6102,12 @@ var u2Mutations = {
                 "px; font-size: " +
                 scale * 1.5 +
                 'px">';
-            if (game.global.showU2MutNames) text += '<span class="mutTreeName">' + dn + "</span>";
-            text += '<span class="icomoon icon-star"></span></div>';
+            if (usingScreenReader) {
+                text += '<span class="mutTreeName" id="' + item + 'Name">' + dn + " " + SRBuyText + "</span>";
+            } else {
+                if (game.global.showU2MutNames) text += '<span class="mutTreeName">' + dn + "</span>";
+            }
+            text += '<span class="icomoon icon-star"></span></button>';
             if (!itemObj.require) continue;
             var connect = itemObj.require;
             for (var x = 0; x < connect.length; x++) {
@@ -5842,8 +6161,13 @@ var u2Mutations = {
         }
         text += "</div>";
         text +=
-            "<div id='mutZoomButtons'><div id='mutZoomIn' onclick='u2Mutations.zoomClicked(-1);' onmouseover='tooltip(\"Zoom In\", \"customText\", event, \"Click this to Zoom In to the Mutators tree. You can also use mouse wheel to zoom, or click and drag the tree to move it around.\");' onmouseout='tooltip(\"hide\")'><span class='icomoon icon-zoom-in'></span></div><div id='mutZoomOut' onclick='u2Mutations.zoomClicked(1);' onmouseover='tooltip(\"Zoom Out\", \"customText\", event, \"Click this to Zoom Out of the Mutators tree. You can also use mouse wheel to zoom, or click and drag the tree to move it around.\");' onmouseout='tooltip(\"hide\")'><span class='icomoon icon-zoom-out'></span></div></div>";
+            "<div id='mutZoomButtons'><button aria-label='Mastery Information' id='masteryInfo' onmouseover='tooltip(\"Mastery Info\", null, event);' onmouseout='tooltip(\"hide\")'>M</button><div id='mutZoomIn' aria-hidden=true onclick='u2Mutations.zoomClicked(-1);' onmouseover='tooltip(\"Zoom In\", \"customText\", event, \"Click this to Zoom In to the Mutators tree. You can also use mouse wheel to zoom, or click and drag the tree to move it around.\");' onmouseout='tooltip(\"hide\")'><span class='icomoon icon-zoom-in'></span></div><div id='mutZoomOut' aria-hidden=true onclick='u2Mutations.zoomClicked(1);' onmouseover='tooltip(\"Zoom Out\", \"customText\", event, \"Click this to Zoom Out of the Mutators tree. You can also use mouse wheel to zoom, or click and drag the tree to move it around.\");' onmouseout='tooltip(\"hide\")'><span class='icomoon icon-zoom-out'></span></div></div>";
+        text += "<hr class='visually-hidden' title='bottom of tooltip'/>";
         document.getElementById("mutTreeWrapper").innerHTML = text;
+        for (let item in this.tree) {
+            makeAccessibleTooltip(`${item}MutatorBox`, [item, "Mutator"]);
+        }
+        makeAccessibleTooltip("masteryInfo", ["Mastery Info", null]);
         this.open = true;
     },
     closeTree: function () {
@@ -5856,6 +6180,10 @@ var u2Mutations = {
     },
     rewardMutation: function (cell) {
         if (!cell.u2Mutation || !cell.u2Mutation.length) return 0;
+        if (game.global.spireActive && game.global.universe == 2) {
+            this.types.Spire1.onDeath(cell);
+            return;
+        }
         var reward = game.global.world - 199;
         var rewardMult = 0;
         if (cell.u2Mutation.length >= 2) giveSingleAchieve("Double Trouble");
@@ -5903,6 +6231,8 @@ var u2Mutations = {
             reward *= 1 + getDailyHeliumValue(countDailyWeight()) / 100;
         }
         if (Fluffy.isRewardActive("bigSeeds")) reward *= 10;
+        reward *= u2SpireBonuses.seedDrop();
+        reward = calcHeirloomBonus("Staff", "SeedDrop", reward);
         game.global.mutatedSeeds += reward;
         if (typeof game.global.messages.Loot.seeds === "undefined") game.global.messages.Loot.seeds = true;
         message(
@@ -5935,10 +6265,26 @@ var u2Mutations = {
                 "helium",
             );
         }
-        if (this.open) this.openTree();
+
+        if (this.open) {
+            const nextCost = this.nextCost();
+            if (game.global.mutatedSeeds >= nextCost) {
+                this.openTree();
+            } else {
+                const seedElem = document.getElementById("mutSeedCounter");
+                const costText =
+                    Object.keys(this.tree).length > this.purchaseCount
+                        ? "Next Mutator Costs: " + prettify(nextCost)
+                        : "All Mutators Purchased!";
+                const seedText = `Seeds Available: ${prettify(game.global.mutatedSeeds)}&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;${costText}`;
+                if (seedElem.innerHTML !== seedText) seedElem.innerHTML = seedText;
+            }
+        }
+
         this.setAlert();
     },
     addMutations: function (array) {
+        if (game.global.spireActive && game.global.universe == 2) return this.types.Spire1.pattern(array);
         if (game.global.world < 201) return array;
         var thisTypes = this.getTypes();
         if (thisTypes.length == 0) return array;
@@ -6028,6 +6374,21 @@ var u2Mutations = {
                 g: 51,
                 b: 153,
             },
+            S1G: {
+                r: 34,
+                g: 177,
+                b: 76,
+            },
+            S1O: {
+                r: 255,
+                g: 127,
+                b: 39,
+            },
+            S1R: {
+                r: 255,
+                g: 0,
+                b: 0,
+            },
         };
         if (thisMutation.length == 1) {
             var useColor = colors[thisMutation[0]];
@@ -6057,6 +6418,7 @@ var u2Mutations = {
             else if (name == "NVA" || name == "NVX") name = "Nova";
             else if (name == "CSX" || name == "CSP") name = "Swapper";
             else if (name == "CMP" || name == "CMX") name = "Compression";
+            else if (name == "S1G" || name == "S1R" || name == "S1O") name = "Spire1";
             if (nameList.indexOf(name) != -1) continue;
             nameList.push(name);
         }
@@ -6077,7 +6439,360 @@ var u2Mutations = {
         }
         return text;
     },
+    checkStacks: function () {
+        if (game.global.novaMutStacks > 0 && !game.global.mapsActive) this.types.Nova.drawStacks();
+        if (game.global.spireMutStacks > 0 && !game.global.mapsActive) this.types.Spire1.drawStacks();
+    },
+    clearStacks: function () {
+        this.types.Nova.clearStacks();
+        this.types.Rage.clearStacks();
+        this.types.Spire1.clearStacks();
+    },
     types: {
+        Spire1: {
+            pattern: function (currentArray) {
+                var shape = this.getShape();
+                for (var x = 0; x < shape.length; x++) {
+                    var thisShape = shape[x];
+                    currentArray[thisShape[0]].u2Mutation.push(this.defs[thisShape[1]]);
+                }
+                return currentArray;
+            },
+            getShape: function () {
+                switch (game.global.spireLevel) {
+                    case 1:
+                        return [
+                            [4, 0],
+                            [14, 0],
+                        ];
+                    case 2:
+                        return [
+                            [4, 0],
+                            [14, 0],
+                            [24, 0],
+                            [34, 0],
+                            [44, 0],
+                            [54, 0],
+                        ];
+                    case 3:
+                        return [
+                            [3, 0],
+                            [4, 0],
+                            [14, 0],
+                            [24, 0],
+                            [34, 0],
+                            [44, 0],
+                            [53, 0],
+                            [54, 0],
+                            [64, 0],
+                        ];
+                    case 4:
+                        return [
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [14, 0],
+                            [15, 0],
+                            [24, 0],
+                            [25, 0],
+                            [34, 0],
+                            [44, 0],
+                            [53, 0],
+                            [54, 0],
+                            [64, 0],
+                            [74, 0],
+                        ];
+                    case 5:
+                        return [
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [14, 0],
+                            [15, 0],
+                            [24, 0],
+                            [25, 0],
+                            [34, 0],
+                            [44, 0],
+                            [53, 0],
+                            [54, 0],
+                            [63, 0],
+                            [64, 0],
+                            [73, 0],
+                            [74, 0],
+                            [82, 0],
+                            [83, 0],
+                        ];
+                    case 6:
+                        return [
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [14, 0],
+                            [15, 0],
+                            [24, 0],
+                            [25, 0],
+                            [34, 0],
+                            [35, 0],
+                            [44, 0],
+                            [45, 0],
+                            [53, 0],
+                            [54, 0],
+                            [55, 0],
+                            [63, 0],
+                            [64, 0],
+                            [65, 0],
+                            [73, 0],
+                            [74, 0],
+                            [75, 0],
+                            [76, 0],
+                            [82, 0],
+                            [83, 0],
+                            [86, 0],
+                            [96, 0],
+                            [97, 0],
+                        ];
+                    case 7:
+                        return [
+                            [2, 0],
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [13, 0],
+                            [14, 0],
+                            [15, 0],
+                            [23, 0],
+                            [24, 0],
+                            [25, 0],
+                            [33, 0],
+                            [34, 0],
+                            [35, 0],
+                            [43, 0],
+                            [44, 0],
+                            [45, 0],
+                            [53, 0],
+                            [54, 0],
+                            [55, 0],
+                            [63, 0],
+                            [64, 0],
+                            [65, 0],
+                            [72, 0],
+                            [73, 0],
+                            [74, 0],
+                            [75, 0],
+                            [76, 0],
+                            [81, 0],
+                            [82, 0],
+                            [83, 0],
+                            [85, 0],
+                            [86, 0],
+                            [87, 0],
+                            [92, 0],
+                            [97, 0],
+                        ];
+                    case 8:
+                        return [
+                            [2, 0],
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [13, 0],
+                            [14, 0],
+                            [15, 0],
+                            [23, 0],
+                            [24, 0],
+                            [25, 0],
+                            [33, 0],
+                            [34, 0],
+                            [35, 0],
+                            [41, 0],
+                            [42, 0],
+                            [43, 0],
+                            [44, 0],
+                            [45, 0],
+                            [53, 1],
+                            [54, 0],
+                            [55, 0],
+                            [63, 0],
+                            [64, 0],
+                            [65, 0],
+                            [72, 0],
+                            [73, 0],
+                            [74, 0],
+                            [75, 0],
+                            [76, 0],
+                            [81, 0],
+                            [82, 0],
+                            [83, 0],
+                            [85, 0],
+                            [86, 0],
+                            [87, 0],
+                            [91, 0],
+                            [93, 0],
+                            [95, 0],
+                            [97, 0],
+                        ];
+                    case 9:
+                        return [
+                            [2, 0],
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [13, 0],
+                            [14, 0],
+                            [15, 0],
+                            [23, 0],
+                            [24, 0],
+                            [25, 0],
+                            [33, 0],
+                            [34, 0],
+                            [35, 0],
+                            [40, 0],
+                            [41, 0],
+                            [42, 0],
+                            [43, 0],
+                            [44, 0],
+                            [45, 0],
+                            [46, 0],
+                            [51, 0],
+                            [53, 1],
+                            [54, 0],
+                            [55, 1],
+                            [60, 0],
+                            [61, 0],
+                            [63, 0],
+                            [64, 0],
+                            [65, 0],
+                            [72, 0],
+                            [73, 0],
+                            [74, 0],
+                            [75, 0],
+                            [76, 0],
+                            [81, 0],
+                            [82, 0],
+                            [83, 0],
+                            [85, 0],
+                            [86, 0],
+                            [87, 0],
+                            [91, 0],
+                            [93, 0],
+                            [95, 0],
+                            [97, 0],
+                        ];
+                    case 10:
+                        return [
+                            [2, 0],
+                            [3, 0],
+                            [4, 0],
+                            [5, 0],
+                            [6, 0],
+                            [13, 0],
+                            [14, 0],
+                            [15, 0],
+                            [23, 0],
+                            [24, 0],
+                            [25, 0],
+                            [33, 0],
+                            [34, 0],
+                            [35, 0],
+                            [38, 0],
+                            [40, 0],
+                            [41, 0],
+                            [42, 0],
+                            [43, 0],
+                            [44, 0],
+                            [45, 0],
+                            [46, 0],
+                            [47, 0],
+                            [48, 0],
+                            [51, 0],
+                            [53, 1],
+                            [54, 0],
+                            [55, 1],
+                            [57, 0],
+                            [60, 0],
+                            [61, 0],
+                            [63, 0],
+                            [64, 0],
+                            [65, 0],
+                            [72, 0],
+                            [73, 0],
+                            [74, 0],
+                            [75, 0],
+                            [76, 0],
+                            [81, 0],
+                            [82, 0],
+                            [83, 0],
+                            [85, 0],
+                            [86, 0],
+                            [87, 0],
+                            [88, 0],
+                            [89, 0],
+                            [91, 0],
+                            [93, 0],
+                            [95, 0],
+                            [97, 0],
+                            [99, 2],
+                        ];
+                }
+            },
+            hasMut: function (cell) {
+                if (!cell.u2Mutation || !cell.u2Mutation.length) return false;
+                var mut = cell.u2Mutation[0];
+                if (mut == "S1G" || mut == "S1O" || mut == "S1R") return true;
+            },
+            removeStacks: function () {
+                game.global.spireMutStacks = 0;
+                this.clearStacks();
+            },
+            clearStacks: function () {
+                manageStacks(null, null, true, "spireMutStacks", null, null, true);
+            },
+            drawStacks: function () {
+                manageStacks(
+                    "Spore Cloud",
+                    game.global.spireMutStacks.toFixed(1),
+                    true,
+                    "spireMutStacks",
+                    "icomoon icon-sun",
+                    this.stackTooltip(),
+                );
+            },
+            stackTooltip: function () {
+                return (
+                    "The Spore Cloud is choking your Trimps and strengthening the Bad Guys! Trimps deal " +
+                    prettify(this.trimpAttackMult()) +
+                    "x damage, and enemies deal " +
+                    prettify(this.enemyAttackMult()) +
+                    "x damage. Gain 1/10th of a stack for every attack against Natural enemies in this Spire and 1 stack when killing them. Stacks reset when completing a Floor. Active in World only."
+                );
+            },
+            onDeath: function (cell) {
+                var mut = cell.u2Mutation[0];
+                if (mut == "S1G") game.global.spireMutStacks++;
+                else if (mut == "S1O") game.global.spireMutStacks += 10;
+                this.drawStacks();
+            },
+            attacked: function (cell) {
+                var mut = cell.u2Mutation[0];
+                if (mut == "S1G") game.global.spireMutStacks += 0.1;
+                else if (mut == "S1O") game.global.spireMutStacks += 1;
+                else if (mut == "S1R") game.global.spireMutStacks += 2;
+                this.drawStacks();
+            },
+            trimpAttackMult: function () {
+                return Math.pow(0.99, game.global.spireMutStacks);
+            },
+            enemyAttackMult: function () {
+                return Math.pow(1.01, game.global.spireMutStacks);
+            },
+            defs: ["S1G", "S1O", "S1R"],
+            name: "Natural",
+        },
         Rage: {
             pattern: function (currentArray) {
                 var possible = this.cellCount();
