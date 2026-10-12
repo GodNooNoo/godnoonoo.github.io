@@ -22,11 +22,11 @@ function newGame() {
     var toReturn = {
         global: {
             //New and accurate version
-            stringVersion: "5.9.2",
+            stringVersion: "5.10.1",
             //Leave 'version' at 4.914 forever, for compatability with old saves
             version: 4.914,
             isBeta: false,
-            betaV: 0,
+            betaV: 7,
             killSavesBelow: 0.13,
             uniqueId: new Date().getTime() + "" + Math.floor(Math.random() * 1e10),
             playerGathering: "",
@@ -91,6 +91,7 @@ function newGame() {
             totalPortals: 0,
             totalRadPortals: 0,
             lastCustomAmt: 1,
+            clearingBuildingQueue: false,
             trapBuildAllowed: false,
             trapBuildToggled: false,
             lastSkeletimp: 0,
@@ -142,7 +143,7 @@ function newGame() {
             roboTrimpCooldown: 0,
             useShriek: false,
             usingShriek: false,
-            autoUpgrades: false,
+            autoUpgrades: 0,
             autoUpgradesAvailable: false,
             autoPrestiges: 0,
             autoStorage: false,
@@ -250,6 +251,10 @@ function newGame() {
             passive: true,
             spiresCompleted: 0,
             lastSpireCleared: 0,
+            spireLevel: 1,
+            spireMutStacks: 0,
+            u2SpireCells: 0,
+            u2SpireCellsBest: 0,
             sugarRush: 0,
             holidaySeed: Math.floor(Math.random() * 100000),
             hideMapRow: false,
@@ -276,6 +281,9 @@ function newGame() {
             uberNature: "",
             //For the log notation base
             logNotBase: 10,
+            //For configurable Hybrid
+            hybridSwitchExp: 31,
+            hybridExponentType: "Eng",
             lowestShield: 100,
             hemmTimer: 300,
             armyAttackCount: 0,
@@ -304,6 +312,7 @@ function newGame() {
             tutorialLg: false,
             mazBw: -1,
             expandingTauntimp: false,
+            timeWarpLimit: -1,
             lastHeirlooms: {
                 u1: {
                     Shield: -1,
@@ -1074,6 +1083,21 @@ function newGame() {
         options: {
             displayed: false,
             menu: {
+                showSRInfo: {
+                    enabled: 1,
+                    extraTags: "other",
+                    description: "Hides or displays the ScreenReaderInfo box.",
+                    titles: ["Hide Screen Read Info", "Show Screen Read Info"],
+                    onToggle: function () {
+                        if (!usingScreenReader) return;
+                        var elem = document.getElementById("screenReaderInfo");
+                        if (elem == null) return;
+                        elem.style.display = this.enabled == 1 ? "block" : "none";
+                    },
+                    lockUnless: function () {
+                        return usingScreenReader;
+                    },
+                },
                 autoSave: {
                     enabled: 1,
                     extraTags: "popular general",
@@ -1115,7 +1139,7 @@ function newGame() {
                     enabled: 1,
                     extraTags: "layout",
                     description:
-                        "Swap between Standard Formatting (12.7M, 540B), Engineering Notation (12.7e6, 540e9), Scientific Notation (1.27e7, 5.40e11), Alphabetic Notation (12.7b, 540c), Hybrid Notation (Standard up to e96, then Engineering. Mimics Standard pre 4.6), and Logarithmic Notation (10^7.10, 10^8.73). Hold Ctrl while clicking Logarithmic Notation to change the base.",
+                        "Swap between Standard Formatting (12.7M, 540B), Engineering Notation (12.7e6, 540e9), Scientific Notation (1.27e7, 5.40e11), Alphabetic Notation (12.7b, 540c), Hybrid Notation (Standard up to e96, then Engineering. Mimics Standard pre 4.6), and Logarithmic Notation (10^7.10, 10^8.73). Hold Ctrl while clicking to configure Logarithmic and Hybrid Notation.",
                     titles: [
                         "Scientific Notation",
                         "Standard Formatting",
@@ -1696,131 +1720,7 @@ function newGame() {
                                 times = -1;
                             if (cell < 1) cell = 1;
                             if (cell > 100) cell = 100;
-                            // for (var y = 0; y < setting.length; y++){
-                            // 	//No reason to run if one finishes before the other starts
-                            // 	if (through < setting[y].start || setting[y].through < world) continue;
-                            // 	//Only run conflict detection if both presets match on cell
-                            // 	if (setting[y].cell == cell){
-                            // 		var errorText = " Preset " + (x + 1) + " and Preset " + (y + 1) + " would conflict with this setup."
-                            // 		//If both presets repeat, check for conflicts
-                            // 		if (times != -1 && setting[y].times != -1){
-                            // 			//Repeat every zone always conflicts
-                            // 			if (times == 1 || setting[y].times == 1){
-                            // 				error += errorText;
-                            // 				continue loop1;
-                            // 			}
-                            // 			//Repeat every 2 zones always conflicts with 1, 3, and 5. Conflicts with 2 and 10 if both starts are odd or even.
-                            // 			else if (times == 2){
-                            // 				//If preset y repeats every 2, 10 or 30, check that one world is odd and one is even
-                            // 				if (setting[y].times == 10 || setting[y].times == 2 || setting[y].times == 30){
-                            // 					if ((world % 2) == (setting[y].world % 2)){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				//If preset y repeats at anything other than 0, 2, 10 or 30, it fails
-                            // 				else {
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 			}
-                            // 			//Repeat every 3 zones always conflicts with anything that doesn't repeat every 3 or 30 zones
-                            // 			else if (times == 3){
-                            // 				//If both presets repeat every 3 zones, see if they would intersect
-                            // 				if (setting[y].times == 3 || setting[y].times == 30){
-                            // 					if (setting[y].world % 3 == world % 3) {
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				//If preset y repeats at anything other than 3, it will conflict
-                            // 				else{
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 			}
-                            // 			//Repeat every 5 zones always conflicts with 1, 2, 3.
-                            // 			else if (times == 5){
-                            // 				//If preset y doesn't repeat, or repeats at 5 or 10 or 30, check if both worlds % 5 match
-                            // 				if (setting[y].times == 5 || setting[y].times == 10 || setting[y].times == 30){
-                            // 					var intersect = ((world - setting[y].world) % 5);
-                            // 					if (intersect == 0) {
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				//Anything else fails
-                            // 				else {
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 			}
-                            // 			//Repeat every 10 zones conflicts with 2 if both are even or odd, conflicts with 3 always, conflicts with 5 if both % 5 match, conflicts with 10 or 30 if both % 10 match
-                            // 			//Repeat every 30 zones conflicts with 2 if both are even or odd, conflicts with 3 if both % 3 match, conflicts with 5 if both % 5 match, conflicts with 10 if both % 10 match, and 30 if both % 30 match
-                            // 			else if (times == 10 || times == 30){
-                            // 				if (setting[y].times == 2){
-                            // 					if ((world % 2) == (setting[y].world % 2)){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				//3 For 10
-                            // 				else if (times == 10 && setting[y].times == 3){
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 				//3 For 30
-                            // 				else if (setting[y].times == 3){
-                            // 					if (setting[y].world % 3 == world % 3){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				else if (setting[y].times == 5){
-                            // 					if ((world % 5) == (setting[y].world % 5)){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				//10 for 10 and 30, and 30 for 10
-                            // 				else if (setting[y].times == 10 || (setting[y].times == 30 && times == 10)){
-                            // 					if ((world % 10) == (setting[y].world % 10)){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 				else if (setting[y].times == 30){
-                            // 					if ((world % 30) == (setting[y].world % 30)){
-                            // 						error += errorText;
-                            // 						continue loop1;
-                            // 					}
-                            // 				}
-                            // 			}
-                            // 		}
-                            // 		else {
-                            // 			//Either none repeats or only 1 repeats
-                            // 			if (setting[y].world == world) {
-                            // 				error += " Preset " + (x + 1) + " and Preset " + (y + 1) + " cannot exit at the same Zone and Cell number.";
-                            // 				continue loop1;
-                            // 			}
-                            // 			//If this preset doesn't repeat and y does, and if y starts on a lower zone than this preset, check for conflict
-                            // 			if (setting[y].times != -1 && times == -1 && setting[y].world < world){
-                            // 				if ((world - setting[y].world) % setting[y].times == 0){
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 			}
-                            // 			//If this preset repeats and y does not, and if this preset starts at a lower zone than y, check for conflict
-                            // 			if (setting[y].times == -1 && times != -1 && world < setting[y].world){
-                            // 				if ((setting[y].world - world) % times == 0){
-                            // 					error += errorText;
-                            // 					continue loop1;
-                            // 				}
-                            // 			}
-                            // 		}
-                            // 	}
-                            // }
-                            var presetMax = 9;
+                            var presetMax = 10;
                             if (preset == 5 && (game.global.universe != 2 || game.global.highestRadonLevelCleared < 69))
                                 preset = 0;
                             if (preset < 0 || preset > presetMax) preset = 0;
@@ -1953,7 +1853,10 @@ function newGame() {
                             "<p>This setting applies to big popups that occur after hitting certain milestones each portal. This setting will currently block: the Improbability popup";
                         if (game.global.highestLevelCleared >= 199) text += ", the popup at Corruption";
                         if (game.global.highestLevelCleared >= 219) text += ", the popup at The Spire";
-                        if (game.global.highestLevelCleared >= 249) text += ", and the popup on reaching Magma.";
+                        if (game.global.highestLevelCleared >= 249) text += ", the popup on reaching Magma";
+                        if (game.global.highestRadonLevelCleared >= 219) text += ", the popup on reaching Mutation";
+                        if (game.global.highestRadonLevelCleared >= 319)
+                            text += ", and the popup on reaching Stuffy&#39;s Spire.";
                         text +=
                             "</p><p>Note that this setting only blocks large popups once your Highest Zone Reached is 20 Zones past the location of the popup.</p>";
                         return text;
@@ -2056,7 +1959,7 @@ function newGame() {
                     enabled: 1,
                     extraTags: "other",
                     description:
-                        "<p><b>No Offline Progress</b> will cause no extra resources to be earned and no time to be warped when you return to the game. The Portal and Zone timers will not advance while offline, and the game will be in the same state you left it when you come back. This can be useful for speedrun achievements or if you just really really don&apos;t trust your Trimps when you&apos;re gone.</p><p><b>Hybrid Offline</b> combines Time Warp and Trustworthy Trimps into the best offline experience that Science can buy. Time Warp caps at 24 hours, so using Hybrid Offline will grant Trustworthy Trimps at the beginning of your Time Warp for all offline time over 24 hours, and will also grant Trustworthy Trimps for any extra time should you choose to end Time Warp early. Note that the Portal Time and Time in Zone clocks will advance for all time granted by Trustworthy Trimps and by Time Warp.</p><p><b>Time Warp Only</b> will grant up to 24 hours of your offline progress as Time Warp without granting any extra resources from Trustworthy Trimps at the beginning (for time over 24 hours), or at the end (for canceled Time Warp time). This can also be useful for timed runs or tracking stats, as the time added will be capped to however much time you spend in Time Warp.</p><p><b>Trustworthy Trimps Only</b> will skip Time Warp when you come back and grant resources for all time offline from Trustworthy Trimps. For when you want to get back in the game as soon as possible!</p><p style=&apos;text-align: center&apos;><b>This setting can be changed from the Time Warp screen<br/>or in Settings -> Other.</b></p>",
+                        "<p><b>No Offline Progress</b> will cause no extra resources to be earned and no time to be warped when you return to the game. The Portal and Zone timers will not advance while offline, and the game will be in the same state you left it when you come back. This can be useful for speedrun achievements or if you just really really don&apos;t trust your Trimps when you&apos;re gone.</p><p><b>Hybrid Offline</b> combines Time Warp and Trustworthy Trimps into the best offline experience that Science can buy. Time Warp caps at 24 hours, so using Hybrid Offline will grant Trustworthy Trimps at the beginning of your Time Warp for all offline time over 24 hours, and will also grant Trustworthy Trimps for any extra time should you choose to end Time Warp early. Note that the Portal Time and Time in Zone clocks will advance for all time granted by Trustworthy Trimps and by Time Warp.</p><p><b>Time Warp Only</b> will grant up to 24 hours of your offline progress as Time Warp without granting any extra resources from Trustworthy Trimps at the beginning (for time over 24 hours), or at the end (for canceled Time Warp time). This can also be useful for timed runs or tracking stats, as the time added will be capped to however much time you spend in Time Warp.</p><p><b>Trustworthy Trimps Only</b> will skip Time Warp when you come back and grant resources for all time offline from Trustworthy Trimps. For when you want to get back in the game as soon as possible!</p><p style=&apos;text-align: center&apos;><b>This setting can be changed from the Time Warp screen<br/>or in Settings -> Other. Ctrl click from Settings to limit speed, or use the slider during Time Warp.</b></p>",
                     //description: "Disables or enables earning resources while offline. <b>Warning: If this is toggled off, no resources will be earned from Trustworthy Trimps when coming back to the game after being offline.</b> This also stops the current run timer when offline and can be helpful if you are analysing stats and do not want resources counted when there is no timer running",
                     titles: ["No Offline Progress", "Hybrid Offline", "Time Warp Only", "Trustworthy Trimps Only"],
                     secondLocation: ["toggleofflineProgresstimewarp"],
@@ -2089,6 +1992,15 @@ function newGame() {
                         playerSpire.openPopup();
                     },
                 },
+                sealedAutoBattle: {
+                    enabled: 0,
+                    extraTags: "other",
+                    description: "Your Spire is Sealed, but you can look at it here if you want to.",
+                    titles: ["View Spire Assault"],
+                    lockUnless: function () {
+                        return autoBattle.sealed;
+                    },
+                },
                 saveOnPause: {
                     enabled: 1,
                     extraTags: "other",
@@ -2109,6 +2021,7 @@ function newGame() {
                             if (game.options.menu.autoSave.enabled == 1 && game.options.menu.saveOnPause.enabled == 1)
                                 save(false, true);
                             swapClass("timer", "timerPaused", document.getElementById("portalTimer"));
+                            screenReaderAssert("Game is now paused!");
                             handlePauseMessage(true);
                         } else if (this.timeAtPause) {
                             var now = new Date().getTime();
@@ -2127,6 +2040,7 @@ function newGame() {
                             game.global.lastOnline = now;
                             game.global.start = now;
                             swapClass("timer", "timerNotPaused", document.getElementById("portalTimer"));
+                            screenReaderAssert("Game is now unpaused!");
                             handlePauseMessage(false);
                         }
                     },
@@ -3289,7 +3203,8 @@ function newGame() {
                 radSpent: 0,
                 timeLastZone: -1,
                 getMult: function () {
-                    return Math.pow(this.getBonusAmt(), getPerkLevel("Tenacity") + getPerkLevel("Masterfulness"));
+                    const bonusAmount = this.getBonusAmt();
+                    return Math.pow(Math.max(1.1, bonusAmount), getPerkLevel("Tenacity") + getPerkLevel("Masterfulness"));
                 },
                 getCarryoverMult: function () {
                     var mult = 0.5;
@@ -3297,9 +3212,10 @@ function newGame() {
                     return mult;
                 },
                 getTime: function () {
+                    if (game.global.spireActive && !game.global.mapsActive) return 60;
                     var minutes = getZoneMinutes();
                     var lastZone = this.timeLastZone;
-                    if (lastZone == -1) lastZone = 0;
+                    if (lastZone <= 0) lastZone = this.timeLastZone = 0;
                     if (lastZone > 120) lastZone = 120;
                     minutes += lastZone * this.getCarryoverMult();
                     if (minutes > 120) minutes = 120;
@@ -3317,7 +3233,7 @@ function newGame() {
                     return 1.1 + Math.floor(time / 4) * 0.01;
                 },
                 tooltip:
-                    "If things seem tough, just try hitting them harder. Each level increases your Trimps' Attack by 10% (compounding). For every 4 minutes you spend on one Zone, 1% is <b>added</b> to the compounding bonus, with a max of 2 hours. When you clear a Zone, you carry 50% of the time you spent last Zone (up to 2 hours) with you to the new Zone. For example: If you have spent an hour on one Zone, you'll earn a 25% compounding Attack bonus for each level of Tenacity. <b>Maximum of 40 levels.</b>",
+                    "If things seem tough, just try hitting them harder. Each level increases your Trimps' Attack by 10% (compounding). For every 2.4 minutes you spend on one Zone, 1% is <b>added</b> to the compounding bonus for the first hour. After 1 hour, 1% is <b>added</b> to the compounding bonus every 12 minutes, up to a max time of 2 total hours. When you clear a Zone, you carry 50% of the time you spent last Zone (up to 2 hours) with you to the new Zone. For example: If you have spent an hour on one Zone, you'll earn a 35% compounding Attack bonus for each level of Tenacity. If you've spent 2 hours on one Zone, the compounding bonus per level will be 40%. <b>Maximum of 40 levels.</b>",
                 max: 40,
             },
             Criticality: {
@@ -3350,16 +3266,39 @@ function newGame() {
                 },
                 getActiveLevels: function () {
                     var perkLevel = getPerkLevel("Equality");
-                    if (this.scalingActive && this.scalingCount < perkLevel) return this.scalingCount;
-                    if (!this.scalingActive && this.disabledStackCount > -1) return this.disabledStackCount;
+                    if (this.getSetting("scalingActive") && this.scalingCount < perkLevel) return this.scalingCount;
+                    if (!this.getSetting("scalingActive") && this.getSetting("disabledStackCount") > -1)
+                        return this.getSetting("disabledStackCount");
                     return perkLevel;
                 },
                 specialGrowth: 1.5,
-                scalingActive: false,
-                scalingSetting: 5,
-                reversingSetting: 5,
-                scalingReverse: true,
-                disabledStackCount: -1,
+                getObject: function (force) {
+                    if (force) return this.settings[force];
+                    if (game.global.spireActive) return this.settings.spire;
+                    return this.settings.reg;
+                },
+                getSetting: function (setting, force) {
+                    return this.getObject(force)[setting];
+                },
+                setSetting: function (setting, force, value) {
+                    this.getObject(force)[setting] = value;
+                },
+                settings: {
+                    reg: {
+                        scalingActive: false,
+                        scalingSetting: 5,
+                        reversingSetting: 5,
+                        scalingReverse: true,
+                        disabledStackCount: -1,
+                    },
+                    spire: {
+                        scalingActive: false,
+                        scalingSetting: 5,
+                        reversingSetting: 5,
+                        scalingReverse: true,
+                        disabledStackCount: -1,
+                    },
+                },
                 scalingCount: 0,
             },
             Carpentry: {
@@ -3707,7 +3646,7 @@ function newGame() {
                     var text =
                         "Grants your Trimps the ability to locate small Runetrinkets around the World. Purchasing this Perk will grant your Trimps a chance per Zone cleared above Z100 to find a Runetrinket. Each Runetrinket increases your Trimps' attack, health, and gathered primary resources by 1% (additive) per perk level. You can store a maximum of " +
                         this.trinketsPerLevel +
-                        " Runetrinkets per perk level, reducing levels in this perk will deactivate any trinkets above cap but not lose them. Runetrinkets persist through Portal and never reset. The chance to find a Runetrinket increases by about 50% per level of this Perk, and scales as the Zone number increases (up to Z200). You'll also find 1 guaranteed Runetrinket every 25 Zones above Z100 for every 2 levels of this perk.";
+                        " Runetrinkets per perk level, reducing levels in this perk will deactivate any trinkets above cap but not lose them. Runetrinkets persist through Portal and never reset. The chance to find a Runetrinket increases by about 50% per level of this Perk, and scales as the Zone number increases (up to Z200). You'll also find 1 guaranteed Runetrinket every 25 Zones above Z100 for every 2 levels of this perk. <b>Maximum of 50 levels.</b>";
                     text += "<br/><br/>You have " + prettify(this.trinkets) + " Runetrinket" + needAnS(this.trinkets) + ".";
                     text +=
                         " You are currently gaining " +
@@ -4106,7 +4045,7 @@ function newGame() {
                 start: function () {
                     document.getElementById("scienceCollectBtn").style.display = "none";
                     game.resources.science.owned = getScientistInfo(getScientistLevel());
-                    game.global.autoUpgrades = false;
+                    game.global.autoUpgrades = 0;
                     game.global.autoPrestiges = 0;
                     toggleAutoPrestiges(true);
                     toggleAutoUpgrades(true);
@@ -6104,7 +6043,7 @@ function newGame() {
                     if (this.points[increase] >= 1) this.overZero = true;
                     this.purchases++;
                     this.updateButton(increase);
-                    if (!noTip) tooltip(what, "upgrades", "update");
+                    if (!noTip && !usingScreenReader) tooltip(what, "upgrades", "update");
                 },
                 updateButton: function (what) {
                     var ownedElem = document.getElementById(what + "RelicOwned");
@@ -6145,6 +6084,7 @@ function newGame() {
                     addHelium(reward);
                     if (game.global.ArchaeologyDone && !game.global.canGuString) {
                         game.global.canGuString = true;
+                        document.getElementById("goldConfig").style.display = "block";
                         message(
                             "Now that you've mastered the skill of Archaeology, you've gained the ability to use a more powerful Custom Golden Upgrade automator! See the AutoGold tooltip or Ctrl Click AutoGold for more info.",
                             "Notices",
@@ -7371,24 +7311,30 @@ function newGame() {
                     return 5;
                 },
                 bonfireTooltip: function () {
-                    if (this.bonfires == 0)
-                        return (
-                            "You have no Bonfires. Your Trimps are sad and cold. Next Bonfire will be constructed at " +
+                    let text = "";
+
+                    if (this.bonfires === 0) {
+                        text =
+                            "You have no active Bonfires. Your Trimps are sad and cold. Next Bonfire will be constructed at " +
                             prettify(this.bonfirePrice()) +
-                            " Wood."
-                        );
-                    var bonfireLength = this.getBonfireLength();
-                    return (
-                        "You have " +
-                        this.bonfires +
-                        " Bonfire" +
-                        needAnS(this.bonfires) +
-                        ". Your Trimps will automatically construct another Bonfire once you start a Zone with " +
-                        prettify(this.bonfirePrice()) +
-                        " total Wood. Your next bonfire will expire at the start of Zone " +
-                        (this.lastBurn + bonfireLength) +
-                        "."
-                    );
+                            " Wood.";
+                    } else {
+                        const bonfireLength = this.getBonfireLength();
+                        text =
+                            "You have " +
+                            this.bonfires +
+                            " active Bonfire" +
+                            needAnS(this.bonfires) +
+                            ". Your Trimps will automatically construct another Bonfire once you start a Zone with " +
+                            prettify(this.bonfirePrice()) +
+                            " total Wood. Your next Bonfire will expire at the start of Zone " +
+                            (this.lastBurn + bonfireLength) +
+                            ".";
+                    }
+
+                    text += `<br><br>You have constructed ${this.totalBonfires} Bonfire${needAnS(this.totalBonfires)} so far this run.`;
+
+                    return text;
                 },
                 emberTooltip: function () {
                     return (
@@ -7445,7 +7391,7 @@ function newGame() {
                     return (
                         "Travel to a dimension with fragile but dangerous Enemies. All Bad Guys are Fast and have x100 Attack. Hitting a Bad Guy without killing it creates a stack of Glass. Each Glass stack increases the base Enemy Attack multiplier by +1x. Every 100 Glass, Enemy Attack and Health doubles. Every " +
                         prettify(1000) +
-                        " Glass, Enemies gain a Crystallized stack and Glass stacks reset to 0. Each Crystallized stack reduces Enemy Health by 20% (compounding) but also gives them a 10% chance to reflect an attack, and reaching 10 Crystallized stacks fails this Challenge. Killing an Enemy at or above World level removes two stacks of Glass plus one for every Crystallized stack on the Enemy, but Crystallized can never be removed. Completing <b>Z175</b> with this Challenge active will permanently cause all Radon earned to be increased by 10% (compounding) per Zone above Z175."
+                        " Glass, Enemies gain a Crystallized stack and Glass stacks reset to 0. Each Crystallized stack reduces Enemy Health by 20% (compounding) but also gives them a 10% chance to reflect an attack, and reaching 10 Crystallized stacks fails this Challenge. Killing an Enemy at or above World level removes two stacks of Glass plus one for every Crystallized stack on the Enemy, but Crystallized can never be removed. Completing <b>Z175</b> with this Challenge active will permanently cause all Radon earned to be increased by 10% (compounding) per Zone between Z175 and the Glass ceiling at Z400."
                     );
                 },
                 get squaredDescription() {
@@ -7754,7 +7700,7 @@ function newGame() {
                     text +=
                         "Travel to a bitterly cold dimension. Every completed Zone reduces the temperature of the world, lowering your Trimps' attack, health, and resources (gathered and looted) by <b>" +
                         prettify(this.getReducePercent() * 100) +
-                        "%</b>. The enemies in this dimension are even colder and will apply a stack of Chilled with every attack they land. Upon death Bad Guys explode, dealing 5x their attack in damage and applying another 20 stacks of Chilled to your Trimps. Each stack of Chilled reduces your Trimps' attack by 0.2% and their health by 0.1%. Fortunately maps are still nice and warm in this dimension, and attacking map enemies at world level or above will cause 1 stack of Chilled to be lost, plus another stack for each map level above world level. Additionally, if a map above world level is cleared, 1% of all Chilled stacks will be cleared for each level. All enemies within maps are fast.";
+                        "%</b>. The enemies in this dimension are even colder and will apply a stack of Chilled with every attack they land. Upon death Bad Guys explode, dealing 5x their attack in damage and applying another 20 stacks of Chilled to your Trimps. Each stack of Chilled reduces your Trimps' attack by 0.2% and their health by 0.1%. Fortunately maps are still nice and warm in this dimension, and attacking map enemies at world level or above will cause 1 stack of Chilled to be lost, plus another stack for each map level above world level. Additionally, if a map above world level is cleared, 1% of all Chilled stacks will be cleared for each level.";
                     text +=
                         " Completing <b>Z" +
                         this.completeAfterZone +
@@ -8482,6 +8428,22 @@ function newGame() {
                 },
                 hidden: false,
             },
+            mostU2Voids: {
+                get title() {
+                    return "Most U2 Void Maps in one Run";
+                },
+                display: function () {
+                    return this.value > 0 || this.valueTotal > 0;
+                },
+                displayCurrent: function () {
+                    return false;
+                },
+                value: 0,
+                valueTotal: 0,
+                noAdd: true,
+                keepHighest: true,
+                hidden: false,
+            },
         },
         generatorUpgrades: {
             Efficiency: {
@@ -8630,7 +8592,7 @@ function newGame() {
             },
         },
         //Total 4448% after 4.6
-        tierValues: [0, 0.3, 1, 2.5, 5, 10, 20, 40, 80, 160, 250, 400, 750, 1200, 2000],
+        tierValues: [0, 0.3, 1, 2.5, 5, 10, 20, 40, 80, 160, 250, 400, 750, 1200, 2000, 3000],
         //rip colorsList, 11/28/15 - 11/28/17. He served us well until it became obvious that CSS was better.
         //colorsList: ["white", "#155515", "#151565", "#551555", "#954515", "#651515", "#951545", "#35a5a5", "#d58565", "#d53535"],
         achievements: {
@@ -8729,11 +8691,11 @@ function newGame() {
                 },
                 breakpoints: [
                     2, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 225,
-                    250, 275, 300, 325, 350, 375, 400,
+                    250, 275, 300, 325, 350, 375, 400, 425, 450,
                 ],
                 tiers: [
                     9, 9, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14,
-                    14, 14, 14,
+                    14, 14, 14, 15, 15,
                 ],
                 names: [
                     "This is Harder",
@@ -8766,7 +8728,9 @@ function newGame() {
                     "Universal Specialist",
                     "Zoning Committee",
                     "Quadcentennial",
-                ],
+                    "Terrific Traveler",
+                    "Progression Professor",
+                ], // "World Wanderer", "Indefatigable",
                 icon: "icomoon icon-navigation",
                 newStuff: [],
                 size: 1.4,
@@ -9334,11 +9298,11 @@ function newGame() {
                         return prettify(this.evaluate()) + " / " + prettify(this.breakpoints[this.finished]);
                     return prettify(this.evaluate()) + " total";
                 },
-                breakpoints: [5000, 1e5, 1e6, 5e7, 2.5e9, 1e11, 5e12],
+                breakpoints: [5000, 1e5, 1e6, 5e7, 2.5e9, 1e11, 5e12, 1e14],
                 display: function () {
                     return game.global.highestRadonLevelCleared >= 200;
                 },
-                tiers: [13, 13, 14, 14, 14, 14, 14],
+                tiers: [13, 13, 14, 14, 14, 14, 14, 15],
                 names: [
                     "Seed Scavenger",
                     "Seed Surveyor",
@@ -9346,6 +9310,7 @@ function newGame() {
                     "Seed Sower",
                     "Seed Studier",
                     "Seed Specialist",
+                    "Seed Senior",
                     "Seed Savior",
                 ],
                 icon: "icomoon icon-grid2",
@@ -9718,7 +9683,7 @@ function newGame() {
                     "Zippy Zephyr",
                     "Temporal Tempest",
                     "Stratus Screamer",
-                    "Tearin' Tornado",
+                    "Tearin\' Tornado",
                 ],
                 icon: "icomoon icon-alarmclock",
                 newStuff: [],
@@ -9942,9 +9907,38 @@ function newGame() {
                 reverse: true,
                 timed: true,
                 showAll: true,
-                breakpoints: [360, 100, 45, 30], //In minutes
-                tiers: [11, 12, 12, 12],
-                names: ["Thawed", "Tempered", "Melty", "Molten"],
+                breakpoints: [360, 100, 45, 30, 1], //In minutes
+                tiers: [11, 12, 12, 12, 14],
+                names: ["Thawed", "Tempered", "Melty", "Molten", "Boiling"],
+                icon: "icomoon icon-clock2",
+                newStuff: [],
+            },
+            stuffySpireTimed: {
+                finished: 0,
+                title: "U2 Speed: Stuffy",
+                description: function (number) {
+                    number = formatMinutesForDescriptions(this.breakpoints[number]);
+                    return (
+                        "<span style='font-size: .8em'>Defeat Stuffy in less than " + number + " from start of run</span>"
+                    );
+                },
+                display: function () {
+                    return game.global.highestRadonLevelCleared >= 299;
+                },
+                evaluate: function () {
+                    return getMinutesThisPortal();
+                },
+                progress: function () {
+                    return "Best run is " + formatMinutesForDescriptions(this.highest);
+                },
+                u: 2,
+                highest: 0,
+                reverse: true,
+                timed: true,
+                showAll: true,
+                breakpoints: [1200, 600, 100, 45], //In minutes
+                tiers: [14, 14, 15, 15],
+                names: ["Swiftly Stuffed", "Denature Dash", "Lightning Lumberjack", "Supersonic Spire"],
                 icon: "icomoon icon-clock2",
                 newStuff: [],
             },
@@ -10273,12 +10267,12 @@ function newGame() {
         heirlooms: {
             //Basic layout for modifiers. Steps can be set specifically for each modifier, or else default steps will be used
             //NOTE: currentBonus is the only thing that will persist!
-            values: [10, 20, 30, 50, 150, 300, 800, 2000, 5000, 15000, 100000, 750000],
-            recycleOverride: [-1, -1, -1, -1, -1, -1, -1, -1, -1, 25e4, 1e6, 7.5e7],
+            values: [10, 20, 30, 50, 150, 300, 800, 2000, 5000, 15000, 100000, 750000, 5.5e6],
+            recycleOverride: [-1, -1, -1, -1, -1, -1, -1, -1, -1, 25e4, 1e6, 7.5e7, 2e9],
             coreValues: function (tier) {
                 return Math.floor(Math.pow(10, tier) * 20) * 2;
             },
-            slots: [1, 2, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7],
+            slots: [1, 2, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7],
             defaultSteps: [
                 [3, 6, 1],
                 [3, 6, 1],
@@ -10292,6 +10286,7 @@ function newGame() {
                 [512, 1280, 64],
                 [1024, 2560, 128],
                 [2048, 5120, 256],
+                [4096, 10240, 512],
             ],
             rarityNames: [
                 "Basic",
@@ -10306,6 +10301,7 @@ function newGame() {
                 "Radiating",
                 "Hazardous",
                 "Enigmatic",
+                "Mutated",
             ],
             rarities: [
                 [-1, 6000, 4000],
@@ -10334,16 +10330,22 @@ function newGame() {
                 [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 9000, 1000],
                 [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7000, 3000],
                 [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5000, 5000],
-                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2500, 7500],
-                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10000],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2000, 7500, 500],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1000, 8000, 1000],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8500, 1500],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 8000, 2000],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 7000, 3000],
+                [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 10000],
             ],
             rarityBreakpoints: [
-                41, 60, 80, 100, 125, 146, 166, 181, 201, 230, 300, 400, 500, 600, 700, 1, 40, 80, 100, 135, 175, 200, 225,
-                250, 275, 300, 999,
+                40, 60, 79, 100, 125, 145, 165, 180, 200, 230, 300, 400, 500, 600, 700, 1, 40, 80, 100, 135, 175, 200, 225,
+                250, 275, 300, 325, 350, 375, 400, 999,
             ], //don't forget to update the 999 bracket when adding a new rarity!
-            universeBreakpoints: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-            priceIncrease: [1.5, 1.5, 1.25, 1.19, 1.15, 1.12, 1.1, 1.06, 1.04, 1.03, 1.02, 1.015],
-            canReplaceMods: [true, true, true, true, true, true, true, true, false, false, false, false],
+            universeBreakpoints: [
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            ],
+            priceIncrease: [1.5, 1.5, 1.25, 1.19, 1.15, 1.12, 1.1, 1.06, 1.04, 1.03, 1.02, 1.015, 1.013],
+            canReplaceMods: [true, true, true, true, true, true, true, true, false, false, false, false, false],
             Core: {
                 fireTrap: {
                     name: "Fire Trap Damage",
@@ -10430,14 +10432,17 @@ function newGame() {
                 metalDrop: {
                     name: "Metal Drop Rate",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 foodDrop: {
                     name: "Food Drop Rate",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 woodDrop: {
                     name: "Wood Drop Rate",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 gemsDrop: {
                     name: "Gem Drop Rate",
@@ -10450,14 +10455,17 @@ function newGame() {
                 FarmerSpeed: {
                     name: "Farmer Efficiency",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 LumberjackSpeed: {
                     name: "Lumberjack Efficiency",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 MinerSpeed: {
                     name: "Miner Efficiency",
                     currentBonus: 0,
+                    maxTier: 11,
                 },
                 DragimpSpeed: {
                     name: "Dragimp Efficiency",
@@ -10471,18 +10479,52 @@ function newGame() {
                     name: "Scientist Efficiency",
                     currentBonus: 0,
                 },
+                allMetal: {
+                    name: "Metal Drop and Efficiency",
+                    currentBonus: 0,
+                    minTier: 12,
+                },
+                allFood: {
+                    name: "Food Drop and Efficiency",
+                    currentBonus: 0,
+                    minTier: 12,
+                },
+                allWood: {
+                    name: "Wood Drop and Efficiency",
+                    currentBonus: 0,
+                    minTier: 12,
+                },
                 FluffyExp: {
                     heirloopy: true,
                     get name() {
                         return "Pet (" + Fluffy.getName() + ") Exp";
                     },
                     currentBonus: 0,
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, [25, 50, 1], [50, 100, 1], [75, 200, 1], [124, 400, 1.2]],
+                    steps: [
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        [25, 50, 1],
+                        [50, 100, 1],
+                        [75, 200, 1],
+                        [124, 400, 1.2],
+                        [174, 600, 1.5],
+                    ],
                 },
                 ParityPower: {
                     name: "Parity Power",
                     currentBonus: 0,
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [200, 500, 10]],
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [200, 500, 10], [295, 700, 15]],
+                },
+                SeedDrop: {
+                    name: "Seed Drop Rate",
+                    currentBonus: 0,
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [1000, 2000, 4]],
                 },
                 empty: {
                     name: "Empty",
@@ -10506,6 +10548,7 @@ function newGame() {
                         [1024, 2048, 128],
                         [2048, 4096, 256],
                         [4096, 8192, 512],
+                        -1,
                     ],
                 },
                 trainerEfficiency: {
@@ -10521,6 +10564,7 @@ function newGame() {
                         [80, 100, 2],
                         [100, 120, 2],
                         [120, 140, 2],
+                        -1,
                         -1,
                         -1,
                         -1,
@@ -10542,6 +10586,7 @@ function newGame() {
                         -1,
                         -1,
                         -1,
+                        -1,
                     ],
                 },
                 breedSpeed: {
@@ -10560,6 +10605,7 @@ function newGame() {
                         [220, 280, 5],
                         [260, 360, 10],
                         [300, 400, 10],
+                        [400, 550, 15],
                     ],
                 },
                 trimpHealth: {
@@ -10578,6 +10624,7 @@ function newGame() {
                         [360, 460, 10],
                         [600, 750, 10],
                         [800, 1100, 20],
+                        [1200, 1600, 25],
                     ],
                 },
                 trimpAttack: {
@@ -10596,6 +10643,7 @@ function newGame() {
                         [360, 460, 10],
                         [600, 750, 10],
                         [800, 1100, 20],
+                        [1200, 1600, 25],
                     ],
                 },
                 trimpBlock: {
@@ -10611,6 +10659,7 @@ function newGame() {
                         [68, 80, 1],
                         [88, 100, 1],
                         [108, 120, 1],
+                        -1,
                         -1,
                         -1,
                         -1,
@@ -10632,6 +10681,7 @@ function newGame() {
                         [650, 850, 20],
                         [850, 1100, 25],
                         [1100, 1700, 50],
+                        [1700, 2450, 75],
                     ],
                     filter: function () {
                         return !game.portal.Relentlessness.locked;
@@ -10654,11 +10704,12 @@ function newGame() {
                         [30, 50, 0.5],
                         [50, 80, 0.25],
                         [80, 95, 0.3],
+                        [95, 115, 0.4],
                     ],
                     filter: function () {
                         return !game.portal.Relentlessness.locked;
                     },
-                    max: [30, 30, 30, 30, 30, 30, 30, 30, 100, 125, 200, 260],
+                    max: [30, 30, 30, 30, 30, 30, 30, 30, 100, 125, 200, 260, 335],
                 },
                 voidMaps: {
                     name: "Void Map Drop Chance",
@@ -10680,8 +10731,9 @@ function newGame() {
                         [50, 60, 0.25],
                         [5, 7, 0.1],
                         [8, 12, 0.1],
+                        [12, 17, 0.1],
                     ],
-                    max: [50, 50, 50, 50, 50, 50, 50, 50, 80, 99, 40, 50],
+                    max: [50, 50, 50, 50, 50, 50, 50, 50, 80, 99, 40, 50, 60],
                 },
                 plaguebringer: {
                     name: "Plaguebringer",
@@ -10693,8 +10745,22 @@ function newGame() {
                             "% of all non-lethal damage and nature stacks you afflict on your current enemy are copied onto the next enemy. Plaguebringer damage cannot bring an enemy below 5% health, but nature stacks will continue to accumulate."
                         );
                     },
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, [1, 15, 0.5], [15, 30, 0.5], [30, 45, 0.5], [40, 50, 0.5]],
-                    max: [0, 0, 0, 0, 0, 0, 0, 0, 75, 100, 125, 150],
+                    steps: [
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        [1, 15, 0.5],
+                        [15, 30, 0.5],
+                        [30, 45, 0.5],
+                        [40, 50, 0.5],
+                        [45, 55, 0.5],
+                    ],
+                    max: [0, 0, 0, 0, 0, 0, 0, 0, 75, 100, 125, 150, 175],
                 },
                 prismatic: {
                     name: "Prismatic Shield",
@@ -10703,8 +10769,8 @@ function newGame() {
                     specialDescription: function () {
                         return "ADDS this amount on to your total Prismatic Shield. This modifier can only function in the Radon Universe.";
                     },
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, [10, 50, 1], [10, 40, 1], [30, 60, 2]],
-                    max: [0, 0, 0, 0, 0, 0, 0, 0, 0, 250, 500, 750],
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, [10, 50, 1], [10, 40, 1], [30, 60, 2], [50, 90, 2]],
+                    max: [0, 0, 0, 0, 0, 0, 0, 0, 0, 250, 500, 750, 1000],
                 },
                 gammaBurst: {
                     name: "Gamma Burst",
@@ -10720,7 +10786,7 @@ function newGame() {
                             "% of their attack damage. Stacks reset after releasing a Burst or when your Trimps die."
                         );
                     },
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, [1000, 2000, 100], -1, -1],
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, [1000, 2000, 100], -1, -1, -1],
                 },
                 inequality: {
                     name: "Inequality",
@@ -10728,8 +10794,18 @@ function newGame() {
                     specialDescription: function () {
                         return "Reduces the Equality penalty on your Trimps by this amount without changing Enemy reduction.";
                     },
-                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [50, 200, 0.25]],
-                    max: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 400],
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [50, 200, 0.25], [99.9, 300, 0.3]],
+                    max: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 400, 600],
+                },
+                doubleCrit: {
+                    name: "Double Crit",
+                    noScaleU2: true,
+                    currentBonus: 0,
+                    specialDescription: function () {
+                        return "Gives your Trimps this chance to crit for 1 tier higher than they would have.";
+                    },
+                    steps: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, [0.1, 0.3, 0.02]],
+                    max: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25],
                 },
                 empty: {
                     name: "Empty",
@@ -10813,6 +10889,7 @@ function newGame() {
                     num = Math.floor(num * alchObj.getPotionEffect("Elixir of Crafting"));
                     if (autoBattle.bonuses.Scaffolding.level > 0)
                         num = Math.floor(num * autoBattle.bonuses.Scaffolding.getMult());
+                    if (game.global.universe == 2 && u2Mutations.tree.Trimps.purchased) num *= 1.5;
                     return num;
                 },
                 working: 0,
@@ -11151,6 +11228,12 @@ function newGame() {
                 attack: 1,
                 health: 1,
                 fast: false,
+                lootCount: function () {
+                    var count = 1;
+                    if (u2Mutations.tree.Randimp1.purchased) count++;
+                    if (u2Mutations.tree.Randimp2.purchased) count++;
+                    return count;
+                },
                 loot: function (level) {
                     var imports = [];
                     for (var item in game.unlocks.imps) {
@@ -11163,9 +11246,17 @@ function newGame() {
                             imports.push(item);
                         }
                     }
-                    var enemySeed = game.global.mapsActive ? Math.floor(Math.random() * 10000000) : game.global.enemySeed++;
-                    var selected = imports[getRandomIntSeeded(enemySeed, 0, imports.length)];
-                    game.badGuys[selected].loot(level, true);
+                    var count = this.lootCount();
+                    for (var x = 0; x < count; x++) {
+                        var enemySeed = game.global.mapsActive
+                            ? Math.floor(Math.random() * 10000000)
+                            : game.global.enemySeed++;
+                        var rng = getRandomIntSeeded(enemySeed, 0, imports.length);
+                        var selected = imports[rng];
+                        game.badGuys[selected].loot(level, true);
+                        imports.splice(rng, 1);
+                    }
+                    game.global.enemySeed += 3 - count;
                 },
             },
             Pumpkimp: {
@@ -11264,6 +11355,63 @@ function newGame() {
                 fast: false,
             },
             //Honorary Imps
+            Nooimp: {
+                //Designed by Noo Noo
+                location: "Sea",
+                attack: 1.2,
+                health: 0.8,
+                fast: false,
+                loot: function (level) {
+                    var amt = rewardResource("food", 0.5, level, true);
+                    message(
+                        "Noot noot! You splashed water on that imp! It quickly swims away, leaving behind " +
+                            prettify(amt) +
+                            " food.",
+                        "Loot",
+                        "apple",
+                        null,
+                        "primary",
+                    );
+                },
+            },
+            Platypimp: {
+                //Designed by Quia
+                location: "Plentiful",
+                location2: "Farmlands",
+                attack: 1.1,
+                health: 0.85,
+                loot: function (level) {
+                    var random = Math.floor(Math.random() * 3);
+                    var res = ["Wood", "Metal", "Food"];
+                    var icon = ["tree-deciduous", "*cubes", "apple"];
+                    message(
+                        `Your Trimps almost look normal compared to that Platypimp! Did that thing have a bill!? Somehow it dropped ${prettify(rewardResource(res[random].toLowerCase(), 0.5, level, true))} ${res[random]}.`,
+                        "Loot",
+                        icon[random],
+                        null,
+                        "primary",
+                    );
+                },
+            },
+            Duckimp: {
+                //Designed by August
+                location: "Sea",
+                attack: 0.9,
+                health: 1,
+                fast: true,
+                loot: function (level) {
+                    var amt = rewardResource("food", 0.5, level, true);
+                    message(
+                        "Talking through your problems with what's left of the Duckimp helps you realize it was made out of " +
+                            prettify(amt) +
+                            " food! Just what you needed!",
+                        "Loot",
+                        "apple",
+                        null,
+                        "primary",
+                    );
+                },
+            },
             Kittimp: {
                 //Designed by K1d_5h31d0n
                 location: "Forest",
@@ -11342,6 +11490,7 @@ function newGame() {
                     message("That Seirimp dropped " + prettify(amt) + " metal! Neat-O.", "Loot", "*cubes", null, "primary");
                 },
             },
+            //Depths
             Slagimp: {
                 location: "Depths",
                 attack: 0.9,
@@ -11567,6 +11716,11 @@ function newGame() {
                     var totalCleared = fromFluffy && fluffyCount ? fluffyCount : 1;
                     game.stats.highestVoidMap.evaluate();
                     game.stats.totalVoidMaps.value += totalCleared;
+                    if (game.global.universe == 2) {
+                        game.stats.mostU2Voids.value += totalCleared;
+                        if (game.stats.mostU2Voids.valueTotal < game.stats.mostU2Voids.value)
+                            game.stats.mostU2Voids.valueTotal = game.stats.mostU2Voids.value;
+                    }
                     if (game.global.challengeActive == "Frigid") game.challenges.Frigid.completedVoid(totalCleared);
                     var msg =
                         "Cthulimp and the map it came from crumble into the darkness. You find yourself instantly teleported to ";
@@ -12128,28 +12282,29 @@ function newGame() {
                 health: 6,
                 fast: true,
                 loot: function (level) {
-                    if (game.global.spireActive) {
-                        return;
+                    if (!game.global.spireActive) {
+                        if (challengeActive("Eradicated") && game.global.world >= 59 && !game.global.brokenPlanet)
+                            planetBreaker();
+                        if (!game.global.runningChallengeSquared) {
+                            let amt = 30;
+                            amt = rewardResource("helium", amt, level);
+                            message(
+                                "You managed to steal " +
+                                    prettify(amt) +
+                                    " " +
+                                    heliumOrRadon(true) +
+                                    " from that Omnipotrimp. That'll teach it.",
+                                "Loot",
+                                heliumIcon(true),
+                                "helium",
+                                "helium",
+                            );
+                        }
                     }
-                    if (game.global.challengeActive == "Eradicated" && game.global.world >= 59 && !game.global.brokenPlanet)
-                        planetBreaker();
-                    if (!game.global.runningChallengeSquared) {
-                        var amt = 30;
-                        amt = rewardResource("helium", amt, level);
-                        message(
-                            "You managed to steal " +
-                                prettify(amt) +
-                                " " +
-                                heliumOrRadon(true) +
-                                " from that Omnipotrimp. That'll teach it.",
-                            "Loot",
-                            heliumIcon(true),
-                            "helium",
-                            "helium",
-                        );
-                    }
-                    if (game.global.world % 5 == 0) {
-                        message("The Omnipotrimp explodes, killing all of your soldiers!", "Combat", null, null, "trimp");
+
+                    if (game.global.world % 5 === 0) {
+                        const enemyName = game.global.spireActive ? "Echo of Druopitee" : "Omnipotrimp";
+                        message(`The ${enemyName} explodes, killing all of your soldiers!`, "Combat", null, null, "trimp");
                         game.stats.trimpsKilled.value += game.resources.trimps.soldiers;
                         game.global.soldierHealth = 0;
                         game.global.fighting = false;
@@ -12325,7 +12480,7 @@ function newGame() {
                         return "Gain +" + prettify(this.expandingBase() * 100) + "% Max Trimps";
                     return "Gain 0.3% of your current Trimps as extra housing";
                 },
-                loot: function (level, fromMagimp) {
+                loot: function (level, fromMagimp, getAmt) {
                     var name = fromMagimp ? "Randimp" : "Tauntimp";
                     var oldMax = game.resources.trimps.realMax();
                     game.unlocks.impCount.Tauntimp++;
@@ -12339,6 +12494,7 @@ function newGame() {
                                 game.resources.trimps.owned += added;
                             }
                         }
+                        if (getAmt) return added;
                         message(
                             "You found an Expanding Tauntimp! The extra room is increasing your housing by " +
                                 prettify((this.expandingMult() - 1) * 100) +
@@ -12360,6 +12516,7 @@ function newGame() {
                             game.global.challengeActive == "Trapper" || game.global.challengeActive == "Trappapalooza"
                                 ? addMaxHousing(amt, false)
                                 : addMaxHousing(amt, true);
+                        if (getAmt) return amt;
                         var msg = "It's nice, warm, and roomy in that dead " + name + ". ";
                         if (game.global.challengeActive != "Trapper" && game.global.challengeActive != "Trappapalooza") {
                             msg += "You found ";
@@ -12400,7 +12557,7 @@ function newGame() {
                 health: 1,
                 fast: false,
                 dropDesc: "Stacking x1.003 to resource gathering speed",
-                loot: function (level, fromMagimp) {
+                loot: function (level, fromMagimp, noMessage) {
                     var name = fromMagimp ? "Randimp" : "Whipimp";
                     game.unlocks.impCount.Whipimp++;
                     game.jobs.Farmer.modifier *= 1.003;
@@ -12409,6 +12566,7 @@ function newGame() {
                     game.jobs.Scientist.modifier *= 1.003;
                     game.jobs.Dragimp.modifier *= 1.003;
                     game.jobs.Explorer.modifier *= 1.003;
+                    if (noMessage) return;
                     var amt = Math.pow(1.003, game.unlocks.impCount.Whipimp);
                     amt = (amt - 1) * 100;
                     var s = game.unlocks.impCount.Whipimp == 1 ? "" : "s";
@@ -12434,9 +12592,10 @@ function newGame() {
                 health: 1,
                 fast: false,
                 dropDesc: "Stacking x1.003 to Trimp breed speed",
-                loot: function (level, fromMagimp) {
+                loot: function (level, fromMagimp, noMessage) {
                     var name = fromMagimp ? "Randimp" : "Venimp";
                     game.unlocks.impCount.Venimp++;
+                    if (noMessage) return;
                     var amt = Math.pow(1.003, game.unlocks.impCount.Venimp);
                     amt = (amt - 1) * 100;
                     message(
@@ -12533,9 +12692,10 @@ function newGame() {
                 health: 1,
                 fast: false,
                 dropDesc: "Stacking x1.003 to looted resources (not Helium)",
-                loot: function (level, fromMagimp) {
+                loot: function (level, fromMagimp, noMessage) {
                     var name = fromMagimp ? "Randimp" : "Magnimp";
                     game.unlocks.impCount.Magnimp++;
+                    if (noMessage) return;
                     var amt = Math.pow(1.003, game.unlocks.impCount.Magnimp);
                     amt = (amt - 1) * 100;
                     message(
@@ -12767,7 +12927,7 @@ function newGame() {
                 },
                 Void: {
                     resourceType: "Any",
-                    upgrade: ["AutoStorage", "Heirloom", "ImprovedAutoStorage", "MapAtZone", "AutoEquip"],
+                    upgrade: ["AutoStorage", "Heirloom", "ImprovedAutoStorage", "MapAtZone", "NoCoords", "AutoEquip"],
                 },
                 Frozen: {
                     resourceType: "Any",
@@ -12886,7 +13046,7 @@ function newGame() {
                 },
             },
             AutoStorage: {
-                world: 40,
+                world: 20,
                 level: "last",
                 icon: "*eye4",
                 title: "Auspicious Presence",
@@ -12940,6 +13100,24 @@ function newGame() {
                     tooltip("confirm", null, "update", text, null, "Auspicious Presence Part III", null, null, true);
                     game.global.canMapAtZone = true;
                     addNewSetting("mapAtZone");
+                    createHeirloom();
+                    message("You found an Heirloom!", "Loot", "*archive", null, "secondary");
+                },
+            },
+            NoCoords: {
+                world: 250,
+                level: "last",
+                icon: "*eye4",
+                title: "Suspicious Presence",
+                canRunOnce: true,
+                filterUpgrade: true,
+                specialFilter: function () {
+                    return game.stats.highestVoidMap.valueTotal < 250;
+                },
+                fire: function () {
+                    var text =
+                        "<p>From the void, a suspicious presence reaches out and fills some of your mind. Before it even says anything, you immediately ask for peace on the planet and for you to be sent home. Unfortunately for you, the Suspicious Presence lets you know that you must have it confused with its sibling, and that it doesn't actually take requests. It blows a strange bubble thing at one of your Trimps and takes off. Dang! </p><p style='font-weight: bold'>From now on, your AutoUpgrade button can now cycle to a mode where no Coordinations are bought.</p>";
+                    tooltip("confirm", null, "update", text, null, "Supsicious Presence?", null, null, true);
                     createHeirloom();
                     message("You found an Heirloom!", "Loot", "*archive", null, "secondary");
                 },
@@ -13052,7 +13230,7 @@ function newGame() {
                 world: 80,
                 level: "last",
                 icon: "*key4",
-                title: "The Warden's Keys",
+                title: "The Warden&apos;s Keys",
                 filterUpgrade: true,
                 canRunOnce: true,
                 specialFilter: function () {
@@ -13489,7 +13667,7 @@ function newGame() {
                 message: "You found plans for a hotel! (A decent hotel, too)",
                 level: [10, 20],
                 icon: "*office",
-                title: "The Trimps' Guide to Cheap Hotel Construction",
+                title: "The Trimps&apos;s Guide to Cheap Hotel Construction",
                 canRunOnce: true,
                 fire: function () {
                     if (!this.canRunOnce) return;
@@ -13511,7 +13689,7 @@ function newGame() {
             },
             UberHouse: {
                 world: -1,
-                startAt: 29,
+                startAt: 28,
                 message: "This book talks about adding a second floor to your homes! Mind... blown...",
                 level: [10, 20],
                 icon: "book",
@@ -13998,15 +14176,15 @@ function newGame() {
                 },
             },
             /* 		SuperShriek: {
-                message: "This book will help your RoboTrimp shriek louder!",
-                world: 183,
-                level: 5,
-                icon: "book",
-                title: "MagnetoShriek is love, MagnetoShriek is life",
-                fire: function () {
-                    unlockUpgrade("SuperShriek");
-                }
-            }, */
+			message: "This book will help your RoboTrimp shriek louder!",
+			world: 183,
+			level: 5,
+			icon: "book",
+			title: "MagnetoShriek is love, MagnetoShriek is life",
+			fire: function () {
+				unlockUpgrade("SuperShriek");
+			}
+		}, */
             //19 is for Armor
             Miner: {
                 message:
@@ -14184,11 +14362,9 @@ function newGame() {
                 blockU2: true,
                 title: "Magmamancers",
                 fire: function () {
-                    if (challengeActive("Metal") || challengeActive("Transmute")) {
-                        const challenge = challengeActive("Metal")
-                            ? game.challenges.Metal
-                            : game.challenges[game.global.challengeActive];
-                        challenge.holdMagma = true;
+                    if (challengeActive("Metal") || game.global.challengeActive == "Transmute") {
+                        var cname = challengeActive("Metal") ? "Metal" : "Transmute";
+                        game.challenges[cname].holdMagma = true;
                         message(
                             "This book really doesn't help too much while you're dealing with the minerlessness of this dimension. Better let your scientists hold this one for you for a bit.",
                             "Notices",
@@ -14455,7 +14631,7 @@ function newGame() {
                 level: [15, 50],
                 blockU1: true,
                 icon: "th-large",
-                title: "It's a wet map",
+                title: "It&apos;s a wet map",
                 fire: function () {
                     createMap(33, "Atlantrimp", "Atlantis", 3, 100, 1.8, true);
                     message(
@@ -14614,6 +14790,7 @@ function newGame() {
                 specialFilter: function () {
                     return checkIfSpireWorld();
                 },
+                blockU2: true,
                 title: "Spire Metal",
                 icon: "*safe",
                 addClass: "spireMetals",
