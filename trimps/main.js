@@ -23,6 +23,13 @@
 
 "use strict";
 
+if (typeof usingScreenReader === "undefined") {
+    var usingScreenReader = false;
+}
+var srTooltipMode = "click";
+document.getElementById("versionNumber").innerHTML = game.global.stringVersion;
+
+var autoSaveTimeout;
 function restartAutoSave() {
     clearTimeout(autoSaveTimeout);
     autoSaveTimeout = setTimeout(autoSave, 60000);
