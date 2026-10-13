@@ -40,6 +40,8 @@ function autoSave() {
     autoSaveTimeout = setTimeout(autoSave, 60000);
 }
 
+var isSaving = false;
+var disableSaving = false;
 function save(exportThis) {
     isSaving = true;
     autoBattle.save();
