@@ -216,9 +216,6 @@ function save(exportThis) {
         postMessages();
         return;
     }
-    if (cloudConflictDisableSaving) {
-        return;
-    }
     try {
         if (typeof nw !== "undefined") saveWindowSettings();
         if (typeof greenworks !== "undefined") saveToSteam(saveString);
