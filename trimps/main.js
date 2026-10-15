@@ -20,9 +20,15 @@
 		author's website, you can find a copy at
 		<trimps.github.io/license.txt>). If not, see
 		<http://www.gnu.org/licenses/>. */
-
 "use strict";
-
+if (typeof kongregate === "undefined" && document.getElementById("boneBtn") !== null) {
+    var boneBtn = document.getElementById("getBonesBtn");
+    boneBtn.onclick = "";
+    boneBtn.innerHTML =
+        "Kongregate API not loaded! You cannot submit high scores or spend Kreds. Try refreshing or contacting Kongregate support!";
+    boneBtn.style.backgroundColor = "#d9534f";
+    document.getElementById("getBundleBtn").style.display = "none";
+}
 if (typeof usingScreenReader === "undefined") {
     var usingScreenReader = false;
 }
@@ -30,6 +36,7 @@ var srTooltipMode = "click";
 document.getElementById("versionNumber").innerHTML = game.global.stringVersion;
 
 var autoSaveTimeout;
+
 function restartAutoSave() {
     clearTimeout(autoSaveTimeout);
     autoSaveTimeout = setTimeout(autoSave, 60000);
@@ -40,9 +47,11 @@ function autoSave() {
     autoSaveTimeout = setTimeout(autoSave, 60000);
 }
 
+var lastOnlineSave = -1800000;
 var isSaving = false;
 var disableSaving = false;
-function save(exportThis) {
+var cloudConflictDisableSaving = false;
+function save(exportThis, fromManual) {
     isSaving = true;
     autoBattle.save();
     u2Mutations.save();
@@ -216,6 +225,9 @@ function save(exportThis) {
         postMessages();
         return;
     }
+    if (cloudConflictDisableSaving) {
+        return;
+    }
     try {
         if (typeof nw !== "undefined") saveWindowSettings();
         if (typeof greenworks !== "undefined") saveToSteam(saveString);
@@ -233,9 +245,17 @@ function save(exportThis) {
             );
         } else message("For some reason, your game is not saving. Make sure you export and back up your save!", "Notices");
     }
+
+    if (game.options.menu.usePlayFab.enabled == 1 && playFabId) {
+        var timeSinceSave = performance.now() - lastOnlineSave;
+        if ((timeSinceSave < 7200000 && !fromManual) || timeSinceSave < 60000) {
+            return;
+        }
+        saveToPlayFab(saveString);
+    }
 }
 
-function load(saveString) {
+function load(saveString, autoLoad, fromPf) {
     if (usingRealTimeOffline) offlineProgress.finish(true);
     var savegame;
     //oldVersion mostly deprecated, but still used for compat with saves from before stringVersion
@@ -258,669 +278,688 @@ function load(saveString) {
                 "Notices",
             );
             return false;
-        } else {
-            try {
-                unparsedSave = localStorage.getItem("trimpSave1");
-            } catch (e) {
-                message(
-                    "Your browser is preventing Trimps from accessing localStorage, and you will not be able to save or load your progress. Please check your browser settings to ensure that 3rd party cookies are not disabled, and that you're not using any addons that might interrupt storage! <br/><br/> AutoSave has been disabled to prevent damage to your save. If you previously had a save file, it should still be waiting for you once you fix your browser settings.",
-                    "Notices",
-                );
-                game.options.menu.autoSave.enabled = 0;
-                game.options.menu.autoSave.onToggle();
-                return false;
-            }
-            if (unparsedSave !== null) savegame = JSON.parse(LZString.decompressFromBase64(unparsedSave));
-            else {
-                if (typeof nw === "undefined") tooltip("Welcome", null, "update");
-                return false;
-            }
+        } else if (fromImport) {
+            game.options.menu.usePlayFab.enabled = 0;
+            toggleSetting("usePlayFab", null, false, true);
+            playFabId = -1;
         }
-        if (typeof savegame === "undefined" || savegame === null || typeof savegame.global === "undefined") {
+    } else {
+        try {
+            unparsedSave = localStorage.getItem("trimpSave1");
+        } catch (e) {
+            message(
+                "Your browser is preventing Trimps from accessing localStorage, and you will not be able to save or load your progress. Please check your browser settings to ensure that 3rd party cookies are not disabled, and that you're not using any addons that might interrupt storage! <br/><br/> AutoSave has been disabled to prevent damage to your save. If you previously had a save file, it should still be waiting for you once you fix your browser settings.",
+                "Notices",
+            );
+            game.options.menu.autoSave.enabled = 0;
+            game.options.menu.autoSave.onToggle();
+            return false;
+        }
+        if (unparsedSave !== null) savegame = JSON.parse(LZString.decompressFromBase64(unparsedSave));
+        else {
             if (typeof nw === "undefined") tooltip("Welcome", null, "update");
             return false;
         }
-        oldVersion = savegame.global.version;
-        oldStringVersion = savegame.global.stringVersion ? savegame.global.stringVersion.split(".") : null;
-        betaV = savegame.global.betaV;
-        if (savegame.global.isBeta && !game.global.isBeta) {
-            message("You can't import a save from the beta version to this version!", "Notices");
+    }
+    if (typeof savegame === "undefined" || savegame === null || typeof savegame.global === "undefined") {
+        if (typeof nw === "undefined") tooltip("Welcome", null, "update");
+        return false;
+    }
+    oldVersion = savegame.global.version;
+    oldStringVersion = savegame.global.stringVersion ? savegame.global.stringVersion.split(".") : null;
+    betaV = savegame.global.betaV;
+    if (savegame.global.isBeta && !game.global.isBeta) {
+        message("You can't import a save from the beta version to this version!", "Notices");
+        return false;
+    }
+    if (
+        oldStringVersion &&
+        oldStringVersion.length &&
+        compareVersion(oldStringVersion, game.global.stringVersion.split("."), true)
+    ) {
+        var compatText =
+            "Your save file is from a newer version of Trimps (v" +
+            savegame.global.stringVersion +
+            ") than what your computer is running (v" +
+            game.global.stringVersion +
+            ").";
+        if (typeof nw === "undefined") compatText += " Refresh or restart your browser!";
+        else compatText += " You may need to restart Steam and then relaunch Trimps to get the newest update.";
+        message(compatText, "Notices");
+        return false;
+    }
+    resetGame();
+    if (game.global.killSavesBelow > oldVersion) {
+        if (savegame.global.version == 0.07) {
+            game.global.kongBonusMode = true;
+            activateKongBonus(savegame.global.world);
             return false;
         }
-        if (
-            oldStringVersion &&
-            oldStringVersion.length &&
-            compareVersion(oldStringVersion, game.global.stringVersion.split("."), true)
-        ) {
-            var compatText =
-                "Your save file is from a newer version of Trimps (v" +
-                savegame.global.stringVersion +
-                ") than what your computer is running (v" +
-                game.global.stringVersion +
-                ").";
-            if (typeof nw === "undefined") compatText += " Refresh or restart your browser!";
-            else compatText += " You may need to restart Steam and then relaunch Trimps to get the newest update.";
-            message(compatText, "Notices");
-            return false;
+        message(
+            "I'm so terribly sorry, but your previous save game (version " +
+                savegame.global.version +
+                ") does not work in the new version. This should be the last reset!",
+            "Notices",
+        );
+        return false;
+    } else if (game.global.isBeta) {
+        savegame.global.isBeta = true;
+    }
+    savegame.global.version = game.global.version;
+    savegame.global.stringVersion = game.global.stringVersion;
+    savegame.global.betaV = game.global.betaV;
+    //Compatibility to new message filter config. Separated from other compatibility as it needs to go into effect before game has the old booleans copied over it.
+    if (oldVersion < 3.51) {
+        addNewSetting("timestamps");
+        var oldMsg = savegame.global.messages;
+        savegame.global.messages = game.global.messages;
+        for (var item in oldMsg) {
+            savegame.global.messages.enabled = oldMsg[item];
         }
-        resetGame();
-        if (game.global.killSavesBelow > oldVersion) {
-            if (savegame.global.version == 0.07) {
-                game.global.kongBonusMode = true;
-                activateKongBonus(savegame.global.world);
-                return false;
+    }
+    //Load global
+    if (typeof savegame.global !== "undefined") {
+        for (var item in game.global) {
+            if (item == "time" || item == "start" || item == "lastFightUpdate" || item == "prestige") continue;
+            if (typeof savegame.global[item] !== "undefined") game.global[item] = savegame.global[item];
+            if (item == "buildingsQueue") {
+                for (var itemA in game.global.buildingsQueue) {
+                    addQueueItem(game.global.buildingsQueue[itemA]);
+                }
+                game.global.nextQueueId = game.global.buildingsQueue.length;
             }
+        }
+    }
+    //c^2
+    if (typeof savegame.c2 !== "undefined") {
+        for (var item in game.c2) {
+            if (savegame.c2[item]) game.c2[item] = savegame.c2[item];
+        }
+    }
+    //Load the rest of the game.categories
+    for (var a in game) {
+        //global, resources, jobs, buildings, upgrades, triggers, equipment, settings, options
+        if (a == "global") continue;
+        if (a == "badGuys") continue;
+        if (a == "worldUnlocks") continue;
+        if (a == "mapConfig") continue;
+        // if (a == "herbs"){ //or any other two step object
+        // 	if (typeof savegame[a] === 'undefined') continue;
+        // 	for (var b in game[a]){
+        // 		if (typeof savegame[a][b] !== 'undefined') game[a][b] = savegame[a][b];
+        // 	}
+        // }
+        if (a == "options" && savegame.options) {
+            for (var itemO in savegame.options.menu) {
+                if (game.options.menu[itemO]) game.options.menu[itemO].enabled = savegame.options.menu[itemO].enabled;
+                if (itemO == "mapAtZone") {
+                    var mazSave = savegame.options.menu.mapAtZone;
+                    var mazGame = game.options.menu.mapAtZone;
+                    mazGame.setZone = mazSave.setZone;
+                    if (mazSave.setZoneB) mazGame.setZoneB = mazSave.setZoneB;
+                    if (mazSave.setZoneU2) mazGame.setZoneU2 = mazSave.setZoneU2;
+                    if (mazSave.setZoneU2B) mazGame.setZoneU2B = mazSave.setZoneU2B;
+                    if (mazSave.U1Mode) mazGame.U1Mode = mazSave.U1Mode;
+                    if (mazSave.U2Mode) mazGame.U2Mode = mazSave.U2Mode;
+                }
+            }
+            if (
+                typeof savegame.options.menu.GeneticistassistTarget !== "undefined" &&
+                savegame.options.menu.GeneticistassistTarget.disableOnUnlock
+            )
+                game.options.menu.GeneticistassistTarget.disableOnUnlock = true;
+            if (savegame.options.menu.pauseGame && savegame.options.menu.pauseGame.timeAtPause)
+                game.options.menu.pauseGame.timeAtPause = savegame.options.menu.pauseGame.timeAtPause;
+            continue;
+        }
+        var topSave = savegame[a];
+        if (typeof topSave === "undefined" || topSave === null) continue;
+        if (savegame.global.brokenPlanet) game.global.prestige.cost = 53;
+        if (a == "equipment") {
+            loadEquipment(topSave);
+            continue;
+        }
+        var topGame = game[a];
+        for (var b in topGame) {
+            //each item in main category (resource names, job names, etc)
+            var midSave = topSave[b];
+            if (typeof midSave === "undefined" || midSave === null) continue;
+            var midGame = topGame[b];
+            if (typeof midSave !== "object") midGame = midSave;
+            else
+                for (var c in midGame) {
+                    //purchased, cost, etc
+                    if (c == "cost") continue;
+                    if (c == "tooltip") continue;
+                    if (a == "mapUnlocks" && c == "repeat") continue;
+                    if (a == "stats" && c == "title") continue; //title is being deleted from stats now, but I guess this has to stay forever for 4.8 compatibility.
+                    if (a == "resources" && b == "trimps" && c == "employed") {
+                        continue;
+                    }
+                    if (a == "resources" && c == "owned") {
+                        //check bad entries here.
+                    }
+                    if (a == "buildings" && c == "purchased") {
+                        if (savegame.buildings[b].purchased < 0) savegame.buildings[b].purchased = 0;
+                    }
+                    var botSave = midSave[c];
+                    if (typeof botSave === "undefined" || botSave === null) continue;
+                    if (a == "heirlooms") {
+                        if (typeof botSave.currentBonus !== "undefined") midGame[c].currentBonus = botSave.currentBonus;
+                        continue;
+                    }
+
+                    midGame[c] = botSave;
+                }
+        }
+    }
+    game.global.lockTooltip = false;
+    u2Mutations.load();
+    autoBattle.resetAll();
+    playerSpire.resetToDefault();
+    alchObj.load();
+    autoBattle.load();
+    if (savegame.playerSpire) playerSpire.load(savegame.playerSpire);
+    //Compatibility
+
+    if (oldVersion === 1.0) {
+        var hasPortal = false;
+        for (var portItem in game.portal) {
+            var portUpgrade = game.portal[portItem];
+            if (portUpgrade.level > 0) hasPortal = true;
+            if (typeof portUpgrade.level === "undefined") continue;
+            for (var d = 0; d < portUpgrade.level; d++) {
+                portUpgrade.heliumSpent += Math.ceil(d / 2 + portUpgrade.priceBase * Math.pow(1.3, d));
+            }
+        }
+        if (hasPortal) game.global.totalPortals = 1;
+    }
+    if (oldVersion === 1.01) {
+        game.jobs.Dragimp.modifier = 0.5 * Math.pow(1.05, game.buildings.Tribute.owned);
+    }
+    if (oldVersion <= 1.02) {
+        for (var checkResourceMax in game.resources) {
+            var toCheckMax = game.resources[checkResourceMax];
+            if (toCheckMax.max == -1) continue;
+            toCheckMax.max = parseFloat(toCheckMax.max);
+        }
+    }
+    if (oldVersion <= 1.06) {
+        game.resources.trimps.max += game.buildings.Mansion.owned * 2;
+        game.buildings.Mansion.increase.by = 10;
+    }
+    if (oldVersion <= 1.07) {
+        game.global.highestLevelCleared = game.global.world;
+        game.resources.trimps.max += game.buildings.Wormhole.owned * 500;
+        game.buildings.Wormhole.increase.by = "1000";
+        if (game.global.world >= 33) game.worldUnlocks.Doom.fire();
+    }
+    if (oldVersion < 1.1) {
+        if (game.global.world >= 25) {
+            for (var mys = 0; mys < Math.floor((game.global.world - 20) / 5); mys++) {
+                unlockUpgrade("Gymystic");
+            }
+        }
+    }
+    if (oldVersion < 2.213) {
+        for (var item in game.options.menu) {
+            game.options.menu[item].enabled = game.options.menu[item].enabled ? 1 : 0;
+        }
+    }
+    if (oldVersion < 2.3) {
+        if (game.global.highestLevelCleared >= 80) game.global.prisonClear++;
+        if (game.global.world >= 70) {
             message(
-                "I'm so terribly sorry, but your previous save game (version " +
-                    savegame.global.version +
-                    ") does not work in the new version. This should be the last reset!",
+                "Welcome to 2.3! Since you are currently past Zone 70, you have automatically unlocked the new Challenge - 'Trapper' and the new Job - 'Geneticist'",
                 "Notices",
             );
-            return false;
-        } else if (game.global.isBeta) {
-            savegame.global.isBeta = true;
+            unlockJob("Geneticist");
+        } else if (game.global.highestLevelCleared >= 69) {
+            message(
+                "Welcome to 2.3! Since you have previously cleared up to at least Zone 70, you have unlocked the new Challenge - 'Trapper'!",
+                "Notices",
+            );
         }
-        savegame.global.version = game.global.version;
-        savegame.global.stringVersion = game.global.stringVersion;
-        savegame.global.betaV = game.global.betaV;
-        //Compatibility to new message filter config. Separated from other compatibility as it needs to go into effect before game has the old booleans copied over it.
-        if (oldVersion < 3.51) {
-            addNewSetting("timestamps");
-            var oldMsg = savegame.global.messages;
-            savegame.global.messages = game.global.messages;
-            for (var item in oldMsg) {
-                savegame.global.messages.enabled = oldMsg[item];
-            }
-        }
-        //Load global
-        if (typeof savegame.global !== "undefined") {
-            for (var item in game.global) {
-                if (item == "time" || item == "start" || item == "lastFightUpdate" || item == "prestige") continue;
-                if (typeof savegame.global[item] !== "undefined") game.global[item] = savegame.global[item];
-                if (item == "buildingsQueue") {
-                    for (var itemA in game.global.buildingsQueue) {
-                        addQueueItem(game.global.buildingsQueue[itemA]);
-                    }
-                    game.global.nextQueueId = game.global.buildingsQueue.length;
+    }
+    if (oldVersion < 2.7) {
+        for (var statName in game.stats) {
+            var statItem = game.stats[statName];
+            if (typeof statItem.valueTotal !== "undefined" && typeof statItem.value !== "undefined") {
+                statItem.valueTotal = statItem.value;
+                statItem.value = 0;
+            } else if (
+                typeof statItem.valueTotal !== "undefined" &&
+                typeof statItem.valueTotal !== "function" &&
+                typeof savegame.stats !== "undefined"
+            ) {
+                if (typeof savegame.stats[statName] !== "undefined") {
+                    statItem.valueTotal = savegame.stats[statName].value;
                 }
             }
         }
-        //c^2
-        if (typeof savegame.c2 !== "undefined") {
-            for (var item in game.c2) {
-                if (savegame.c2[item]) game.c2[item] = savegame.c2[item];
+        if (game.global.totalHeliumEarned > 0) {
+            var totalHelium = 0;
+            for (var item in game.portal) {
+                if (game.portal[item].locked) continue;
+                var portUpgrade = game.portal[item];
+                if (typeof portUpgrade.level === "undefined" || portUpgrade.level <= 0) continue;
+                totalHelium += portUpgrade.heliumSpent;
             }
+            var newTHV = totalHelium + game.global.heliumLeftover + game.resources.helium.owned;
+            if (game.global.totalHeliumEarned - newTHV > 0)
+                game.stats.spentOnWorms.valueTotal = game.global.totalHeliumEarned - newTHV;
+            game.global.totalHeliumEarned = newTHV;
         }
-        //Load the rest of the game.categories
-        for (var a in game) {
-            //global, resources, jobs, buildings, upgrades, triggers, equipment, settings, options
-            if (a == "global") continue;
-            if (a == "badGuys") continue;
-            if (a == "worldUnlocks") continue;
-            if (a == "mapConfig") continue;
-            // if (a == "herbs"){ //or any other two step object
-            // 	if (typeof savegame[a] === 'undefined') continue;
-            // 	for (var b in game[a]){
-            // 		if (typeof savegame[a][b] !== 'undefined') game[a][b] = savegame[a][b];
-            // 	}
-            // }
-            if (a == "options" && savegame.options) {
-                for (var itemO in savegame.options.menu) {
-                    if (game.options.menu[itemO]) game.options.menu[itemO].enabled = savegame.options.menu[itemO].enabled;
-                    if (itemO == "mapAtZone") {
-                        var mazSave = savegame.options.menu.mapAtZone;
-                        var mazGame = game.options.menu.mapAtZone;
-                        mazGame.setZone = mazSave.setZone;
-                        if (mazSave.setZoneB) mazGame.setZoneB = mazSave.setZoneB;
-                        if (mazSave.setZoneU2) mazGame.setZoneU2 = mazSave.setZoneU2;
-                        if (mazSave.setZoneU2B) mazGame.setZoneU2B = mazSave.setZoneU2B;
-                        if (mazSave.U1Mode) mazGame.U1Mode = mazSave.U1Mode;
-                        if (mazSave.U2Mode) mazGame.U2Mode = mazSave.U2Mode;
-                    }
-                }
-                if (
-                    typeof savegame.options.menu.GeneticistassistTarget !== "undefined" &&
-                    savegame.options.menu.GeneticistassistTarget.disableOnUnlock
-                )
-                    game.options.menu.GeneticistassistTarget.disableOnUnlock = true;
-                if (savegame.options.menu.pauseGame && savegame.options.menu.pauseGame.timeAtPause)
-                    game.options.menu.pauseGame.timeAtPause = savegame.options.menu.pauseGame.timeAtPause;
-                continue;
-            }
-            var topSave = savegame[a];
-            if (typeof topSave === "undefined" || topSave === null) continue;
-            if (savegame.global.brokenPlanet) game.global.prestige.cost = 53;
-            if (a == "equipment") {
-                loadEquipment(topSave);
-                continue;
-            }
-            var topGame = game[a];
-            for (var b in topGame) {
-                //each item in main category (resource names, job names, etc)
-                var midSave = topSave[b];
-                if (typeof midSave === "undefined" || midSave === null) continue;
-                var midGame = topGame[b];
-                if (typeof midSave !== "object") midGame = midSave;
-                else
-                    for (var c in midGame) {
-                        //purchased, cost, etc
-                        if (c == "cost") continue;
-                        if (c == "tooltip") continue;
-                        if (a == "mapUnlocks" && c == "repeat") continue;
-                        if (a == "stats" && c == "title") continue; //title is being deleted from stats now, but I guess this has to stay forever for 4.8 compatibility.
-                        if (a == "resources" && b == "trimps" && c == "employed") {
-                            continue;
-                        }
-                        if (a == "resources" && c == "owned") {
-                            //check bad entries here.
-                        }
-                        if (a == "buildings" && c == "purchased") {
-                            if (savegame.buildings[b].purchased < 0) savegame.buildings[b].purchased = 0;
-                        }
-                        var botSave = midSave[c];
-                        if (typeof botSave === "undefined" || botSave === null) continue;
-                        if (a == "heirlooms") {
-                            if (typeof botSave.currentBonus !== "undefined") midGame[c].currentBonus = botSave.currentBonus;
-                            continue;
-                        }
-
-                        midGame[c] = botSave;
-                    }
-            }
-        }
-        game.global.lockTooltip = false;
-        u2Mutations.load();
-        autoBattle.resetAll();
-        playerSpire.resetToDefault();
-        alchObj.load();
-        autoBattle.load();
-        if (savegame.playerSpire) playerSpire.load(savegame.playerSpire);
-        //Compatibility
-
-        if (oldVersion === 1.0) {
-            var hasPortal = false;
-            for (var portItem in game.portal) {
-                var portUpgrade = game.portal[portItem];
-                if (portUpgrade.level > 0) hasPortal = true;
-                if (typeof portUpgrade.level === "undefined") continue;
-                for (var d = 0; d < portUpgrade.level; d++) {
-                    portUpgrade.heliumSpent += Math.ceil(d / 2 + portUpgrade.priceBase * Math.pow(1.3, d));
-                }
-            }
-            if (hasPortal) game.global.totalPortals = 1;
-        }
-        if (oldVersion === 1.01) {
-            game.jobs.Dragimp.modifier = 0.5 * Math.pow(1.05, game.buildings.Tribute.owned);
-        }
-        if (oldVersion <= 1.02) {
-            for (var checkResourceMax in game.resources) {
-                var toCheckMax = game.resources[checkResourceMax];
-                if (toCheckMax.max == -1) continue;
-                toCheckMax.max = parseFloat(toCheckMax.max);
-            }
-        }
-        if (oldVersion <= 1.06) {
-            game.resources.trimps.max += game.buildings.Mansion.owned * 2;
-            game.buildings.Mansion.increase.by = 10;
-        }
-        if (oldVersion <= 1.07) {
-            game.global.highestLevelCleared = game.global.world;
-            game.resources.trimps.max += game.buildings.Wormhole.owned * 500;
-            game.buildings.Wormhole.increase.by = "1000";
-            if (game.global.world >= 33) game.worldUnlocks.Doom.fire();
-        }
-        if (oldVersion < 1.1) {
-            if (game.global.world >= 25) {
-                for (var mys = 0; mys < Math.floor((game.global.world - 20) / 5); mys++) {
-                    unlockUpgrade("Gymystic");
-                }
-            }
-        }
-        if (oldVersion < 2.213) {
-            for (var item in game.options.menu) {
-                game.options.menu[item].enabled = game.options.menu[item].enabled ? 1 : 0;
-            }
-        }
-        if (oldVersion < 2.3) {
-            if (game.global.highestLevelCleared >= 80) game.global.prisonClear++;
-            if (game.global.world >= 70) {
-                message(
-                    "Welcome to 2.3! Since you are currently past Zone 70, you have automatically unlocked the new Challenge - 'Trapper' and the new Job - 'Geneticist'",
-                    "Notices",
-                );
-                unlockJob("Geneticist");
-            } else if (game.global.highestLevelCleared >= 69) {
-                message(
-                    "Welcome to 2.3! Since you have previously cleared up to at least Zone 70, you have unlocked the new Challenge - 'Trapper'!",
-                    "Notices",
-                );
-            }
-        }
-        if (oldVersion < 2.7) {
-            for (var statName in game.stats) {
-                var statItem = game.stats[statName];
-                if (typeof statItem.valueTotal !== "undefined" && typeof statItem.value !== "undefined") {
-                    statItem.valueTotal = statItem.value;
-                    statItem.value = 0;
-                } else if (
-                    typeof statItem.valueTotal !== "undefined" &&
-                    typeof statItem.valueTotal !== "function" &&
-                    typeof savegame.stats !== "undefined"
-                ) {
-                    if (typeof savegame.stats[statName] !== "undefined") {
-                        statItem.valueTotal = savegame.stats[statName].value;
-                    }
-                }
-            }
-            if (game.global.totalHeliumEarned > 0) {
-                var totalHelium = 0;
-                for (var item in game.portal) {
-                    if (game.portal[item].locked) continue;
-                    var portUpgrade = game.portal[item];
-                    if (typeof portUpgrade.level === "undefined" || portUpgrade.level <= 0) continue;
-                    totalHelium += portUpgrade.heliumSpent;
-                }
-                var newTHV = totalHelium + game.global.heliumLeftover + game.resources.helium.owned;
-                if (game.global.totalHeliumEarned - newTHV > 0)
-                    game.stats.spentOnWorms.valueTotal = game.global.totalHeliumEarned - newTHV;
-                game.global.totalHeliumEarned = newTHV;
-            }
-        }
-        var noOfflineTooltip = false;
-        if (oldVersion < 2.72) {
-            achievementCompatibilityUnlock();
-            noOfflineTooltip = true;
-        }
-        if (oldVersion < 2.73) {
-            if (game.jobs.Geneticist.owned > 0)
-                game.global.lastLowGen = game.global.lowestGen > 0 ? game.global.lowestGen : game.jobs.Geneticist.owned;
-        }
-        if (oldVersion < 2.75) {
-            game.buildings.Wormhole.increase.by = 1500;
-        }
-        if (oldVersion < 2.81 && typeof game.global.lootAvgs !== "undefined") {
-            game.global.lootAvgs.fragments = { average: 0, accumulator: 0 };
-        }
-        if (oldVersion < 2.9) {
-            if (game.options.menu.showFullBreed.enabled == 2) game.options.menu.showFullBreed.enabled = 1;
-            if (game.global.totalPortals >= 1)
-                message(
-                    "Use of the portal has created a chance for the Void to seep into your world. Be alert.",
-                    "Story",
-                    null,
-                    "voidMessage",
-                );
-        }
-        if (oldVersion < 3) {
-            game.global.heirloomSeed = getRandomIntSeeded(game.global.voidSeed, 0, 1000000);
-        }
-        if (oldVersion < 3.1) {
-            game.global.heirloomBoneSeed = getRandomIntSeeded(game.global.heirloomSeed, 0, 1000000);
-        }
-        /* if (oldVersion < 3.11){
+    }
+    var noOfflineTooltip = false;
+    if (oldVersion < 2.72) {
+        achievementCompatibilityUnlock();
+        noOfflineTooltip = true;
+    }
+    if (oldVersion < 2.73) {
+        if (game.jobs.Geneticist.owned > 0)
+            game.global.lastLowGen = game.global.lowestGen > 0 ? game.global.lowestGen : game.jobs.Geneticist.owned;
+    }
+    if (oldVersion < 2.75) {
+        game.buildings.Wormhole.increase.by = 1500;
+    }
+    if (oldVersion < 2.81 && typeof game.global.lootAvgs !== "undefined") {
+        game.global.lootAvgs.fragments = { average: 0, accumulator: 0 };
+    }
+    if (oldVersion < 2.9) {
+        if (game.options.menu.showFullBreed.enabled == 2) game.options.menu.showFullBreed.enabled = 1;
+        if (game.global.totalPortals >= 1)
+            message(
+                "Use of the portal has created a chance for the Void to seep into your world. Be alert.",
+                "Story",
+                null,
+                "voidMessage",
+            );
+    }
+    if (oldVersion < 3) {
+        game.global.heirloomSeed = getRandomIntSeeded(game.global.voidSeed, 0, 1000000);
+    }
+    if (oldVersion < 3.1) {
+        game.global.heirloomBoneSeed = getRandomIntSeeded(game.global.heirloomSeed, 0, 1000000);
+    }
+    /* if (oldVersion < 3.11){
 		game.global.eggSeed = getRandomIntSeeded(game.global.heirloomBoneSeed, 0, 1000000);
 		cancelTooltip();
 		noOfflineTooltip = true;
 		tooltip("Eggs", null, 'update');
 	} */
-        if (oldVersion < 3.2) {
-            game.global.researched = true;
+    if (oldVersion < 3.2) {
+        game.global.researched = true;
+    }
+    if (oldVersion < 3.21) {
+        game.achievements.oneOffs.finished.push(false);
+        game.achievements.oneOffs.filters.push(-1);
+    }
+    if (oldVersion < 3.23) {
+        game.global.autoPrestiges = game.global.autoPrestiges === true ? 1 : 0;
+        game.global.voidMaxLevel = game.global.highestLevelCleared;
+    }
+    if (oldVersion < 3.3) {
+        if (game.global.highestLevelCleared >= 59) game.global.autoUpgradesAvailable = true;
+        if (game.global.sLevel >= 4) game.buildings.Warpstation.craftTime = 0;
+    }
+    if (oldVersion < 3.6) {
+        if (game.achievements.oneOffs.finished.length > 12)
+            game.achievements.oneOffs.finished.splice(12, game.achievements.oneOffs.finished.length - 12);
+        var newFinished = game.achievements.oneOffs.finished;
+        var removed = newFinished.splice(10, 2);
+        for (var x = 0; x < 12; x++) newFinished.push(false);
+        newFinished.splice(18, 0, removed[0]);
+        newFinished.splice(19, 0, removed[1]);
+        game.achievements.oneOffs.finished = newFinished;
+        addNewSetting("tinyButtons");
+    }
+    if (oldVersion < 3.7) {
+        game.global.messages.Loot.essence = true;
+        if (game.global.highestLevelCleared >= 180) addNewSetting("masteryTab");
+    }
+    if (oldVersion < 3.71) {
+        checkAchieve("totalHelium");
+    }
+    if (oldVersion < 3.81) {
+        for (var x = 0; x < game.global.gridArray.length; x++) {
+            if (game.global.gridArray[x].corrupted) game.global.gridArray[x].mutation = "Corruption";
         }
-        if (oldVersion < 3.21) {
-            game.achievements.oneOffs.finished.push(false);
-            game.achievements.oneOffs.filters.push(-1);
+    }
+    if (oldVersion < 3.811) {
+        game.global.messages.Loot.events = true;
+    }
+    if (oldVersion < 4) {
+        if (game.global.world >= 230) game.global.canMagma = false;
+        else if (game.global.highestLevelCleared > 229) {
+            game.global.highestLevelCleared = 229;
+            if (game.global.roboTrimpLevel > 8) game.global.roboTrimpLevel = 8;
         }
-        if (oldVersion < 3.23) {
-            game.global.autoPrestiges = game.global.autoPrestiges === true ? 1 : 0;
-            game.global.voidMaxLevel = game.global.highestLevelCleared;
+        game.resources.trimps.potency = 0.0085;
+        if (game.global.spentEssence > 0) {
+            for (var item in game.talents) {
+                game.talents[item].purchased = false;
+                if (item == "foreman") continue;
+                if (game.talents[item].purchased && typeof game.talents[item].onRespec === "function")
+                    game.talents[item].onRespec();
+            }
+            if (typeof savegame.talents.foreman !== "undefined" && savegame.talents.foreman.purchased)
+                game.global.autoCraftModifier -= 1250;
+            if (typeof savegame.talents.foreman2 !== "undefined" && savegame.talents.foreman2.purchased)
+                game.global.autoCraftModifier -= 3750;
+            game.global.essence += game.global.spentEssence;
+            game.global.spentEssence = 0;
+            message(
+                "Due to a rework of the current Masteries, all of your spent Dark Essence has been refunded for free! Don't forget to repurchase your Masteries!",
+                "Notices",
+            );
+            updateTalentNumbers();
         }
-        if (oldVersion < 3.3) {
-            if (game.global.highestLevelCleared >= 59) game.global.autoUpgradesAvailable = true;
-            if (game.global.sLevel >= 4) game.buildings.Warpstation.craftTime = 0;
+        game.global.messages.Loot.magma = true;
+    }
+    if (oldVersion < 4.01) {
+        game.global.messages.Loot.events = true;
+        if (game.stats.trimpsGenerated.value > 0) {
+            game.global.trimpsGenerated = game.stats.trimpsGenerated.value;
+            game.stats.trimpsGenerated.value = scaleNumberForBonusHousing(game.stats.trimpsGenerated.value);
         }
-        if (oldVersion < 3.6) {
-            if (game.achievements.oneOffs.finished.length > 12)
-                game.achievements.oneOffs.finished.splice(12, game.achievements.oneOffs.finished.length - 12);
-            var newFinished = game.achievements.oneOffs.finished;
-            var removed = newFinished.splice(10, 2);
-            for (var x = 0; x < 12; x++) newFinished.push(false);
-            newFinished.splice(18, 0, removed[0]);
-            newFinished.splice(19, 0, removed[1]);
-            game.achievements.oneOffs.finished = newFinished;
-            addNewSetting("tinyButtons");
+        if (game.stats.highestVoidMap.valueTotal > 230) game.stats.highestVoidMap.valueTotal = 230;
+    }
+    if (oldVersion < 4.1) {
+        game.achievements.humaneRun.earnable = false;
+        game.achievements.humaneRun.lastZone = -1;
+    }
+    if (oldVersion < 4.2) {
+        if (game.global.highestLevelCleared > 64) {
+            tooltip("UnlockedChallenge2", null, "update");
+            noOfflineTooltip = true;
         }
-        if (oldVersion < 3.7) {
-            game.global.messages.Loot.essence = true;
-            if (game.global.highestLevelCleared >= 180) addNewSetting("masteryTab");
-        }
-        if (oldVersion < 3.71) {
-            checkAchieve("totalHelium");
-        }
-        if (oldVersion < 3.81) {
-            for (var x = 0; x < game.global.gridArray.length; x++) {
-                if (game.global.gridArray[x].corrupted) game.global.gridArray[x].mutation = "Corruption";
+    }
+    if (oldVersion == 4.2) {
+        countChallengeSquaredReward();
+    }
+    if (oldVersion < 4.3) {
+        if (game.global.Geneticistassist) addNewSetting("geneSend");
+        addNewSetting("fireForJobs");
+        if (game.global.highestLevelCleared >= 59) addNewSetting("ctrlGigas");
+        if (game.global.spentEssence > 0) respecTalents(false, true);
+    }
+    if (oldVersion < 4.31 && game.global.world >= 230) {
+        game.stats.decayedNurseries.value = game.buildings.Nursery.purchased - game.buildings.Nursery.owned;
+    }
+    if (oldVersion < 4.5 && typeof game.portal.Looting_II !== "undefined" && game.portal.Looting_II.locked == false) {
+        game.global.spiresCompleted = 1;
+        game.global.b += 20;
+        message(
+            "Welcome to Patch 4.5! Since you have already cleared Spire I, you have been given 20 bones and earned 5% Zone Liqufication. Click 'What's New' to see what's new!",
+            "Story",
+        );
+    }
+    if (oldVersion < 4.6) {
+        if (game.global.highestLevelCleared >= 79) addNewSetting("bigPopups");
+        if (game.talents.bionic.purchased) game.talents.bionic.onPurchase();
+        // sessionMapValues Will break things after 4.7
+        // preset.specMod = "0";
+        // preset.perf = false;
+        // preset.extra = 0;
+        game.jobs.Explorer.modifier *= 4;
+        var booksNeeded = Math.floor((game.global.world - 10) / 10);
+        if (booksNeeded > 0) {
+            for (var x = 0; x < booksNeeded; x++) {
+                unlockUpgrade("Speedexplorer");
+                game.mapUnlocks.Speedexplorer.next += 10;
             }
         }
-        if (oldVersion < 3.811) {
-            game.global.messages.Loot.events = true;
+        for (var item in game.c2) {
+            if (savegame.challenges && savegame.challenges[item] && savegame.challenges[item].highestSquared)
+                game.c2[item] = savegame.challenges[item].highestSquared;
         }
-        if (oldVersion < 4) {
-            if (game.global.world >= 230) game.global.canMagma = false;
-            else if (game.global.highestLevelCleared > 229) {
-                game.global.highestLevelCleared = 229;
-                if (game.global.roboTrimpLevel > 8) game.global.roboTrimpLevel = 8;
-            }
-            game.resources.trimps.potency = 0.0085;
-            if (game.global.spentEssence > 0) {
-                for (var item in game.talents) {
-                    game.talents[item].purchased = false;
-                    if (item == "foreman") continue;
-                    if (game.talents[item].purchased && typeof game.talents[item].onRespec === "function")
-                        game.talents[item].onRespec();
-                }
-                if (typeof savegame.talents.foreman !== "undefined" && savegame.talents.foreman.purchased)
-                    game.global.autoCraftModifier -= 1250;
-                if (typeof savegame.talents.foreman2 !== "undefined" && savegame.talents.foreman2.purchased)
-                    game.global.autoCraftModifier -= 3750;
-                game.global.essence += game.global.spentEssence;
-                game.global.spentEssence = 0;
+        addNewFeats([3, 6, 19, 20, 25, 26, 30, 31, 32, 33, 34, 35]);
+        countChallengeSquaredReward();
+        if (checkLowestHeirloom() >= 7) giveSingleAchieve("Swagmatic");
+    } else if (oldVersion < 4.601) {
+        //only run if game was already on 4.6
+        game.mapUnlocks.Speedexplorer.next -= 10;
+    }
+    if (oldVersion < 4.602) {
+        game.global.messages.Loot.cache = true;
+    }
+    if (oldVersion < 4.603 && typeof game.global.messages.Loot.token === "undefined") {
+        game.global.messages.Loot.token = true;
+    }
+    if (oldVersion < 4.7) {
+        if (oldVersion >= 4.6) game.global.mapPresets.p1 = savegame.global.sessionMapValues;
+        if (game.global.spiresCompleted >= 2) game.portal.Capable.locked = false;
+        if (game.global.spiresCompleted >= 3) game.portal.Cunning.locked = false;
+        if (game.global.spiresCompleted >= 4) game.portal.Curious.locked = false;
+        addNewSetting("smallPerks");
+        if (game.options.menu.masteryTab.lockUnless()) addNewSetting("masteryTab");
+        game.global.messages.Loot.bone = true;
+    }
+    if (oldVersion < 4.71) {
+        if (game.global.challengeActive == "Trimp" && game.global.world >= 230) {
+            if (game.upgrades.Coordination.done > 0) {
+                game.global.capTrimp = true;
                 message(
-                    "Due to a rework of the current Masteries, all of your spent Dark Essence has been refunded for free! Don't forget to repurchase your Masteries!",
+                    "I'm terribly sorry, but your Trimp<sup>2</sup> run appears to have more than one Trimp fighting, which kinda defeats the purpose. Your score for this Challenge<sup>2</sup> will be capped at 230.",
                     "Notices",
                 );
-                updateTalentNumbers();
-            }
-            game.global.messages.Loot.magma = true;
-        }
-        if (oldVersion < 4.01) {
-            game.global.messages.Loot.events = true;
-            if (game.stats.trimpsGenerated.value > 0) {
-                game.global.trimpsGenerated = game.stats.trimpsGenerated.value;
-                game.stats.trimpsGenerated.value = scaleNumberForBonusHousing(game.stats.trimpsGenerated.value);
-            }
-            if (game.stats.highestVoidMap.valueTotal > 230) game.stats.highestVoidMap.valueTotal = 230;
-        }
-        if (oldVersion < 4.1) {
-            game.achievements.humaneRun.earnable = false;
-            game.achievements.humaneRun.lastZone = -1;
-        }
-        if (oldVersion < 4.2) {
-            if (game.global.highestLevelCleared > 64) {
-                tooltip("UnlockedChallenge2", null, "update");
-                noOfflineTooltip = true;
+            } else {
+                game.upgrades.Coordination.allowed = 0;
+                game.upgrades.Coordination.locked = true;
+                game.challenges.Trimp.heldBooks += 100;
             }
         }
-        if (oldVersion == 4.2) {
-            countChallengeSquaredReward();
+        if (game.c2.Trimp > 230) game.c2.Trimp = 230;
+        countChallengeSquaredReward();
+    }
+    if (oldVersion < 4.8) {
+        game.options.menu.mapAtZone.setZone = [game.options.menu.mapAtZone.setZone];
+        if (savegame.unlocks && savegame.unlocks.quickTrimps) game.singleRunBonuses.quickTrimps.owned = true;
+        if (savegame.unlocks && savegame.unlocks.goldMaps) game.singleRunBonuses.goldMaps.owned = true;
+        checkAchieve("dailyHelium");
+        checkAchieve("totalHeirlooms");
+        reevaluateTimedAchieve("spireTimed");
+        reevaluateTimedAchieve("spire2Timed");
+        reevaluateTimedAchieve("spire4Timed");
+        addNewFeats([0, 33, 38, 39, 40, 41]);
+        calculateAchievementBonus();
+    }
+    if (oldVersion < 4.801) {
+        if (countPurchasedTalents() == 40) game.global.essence = 0;
+    }
+    if (oldVersion < 4.813) {
+        //Fix for people who haven't played since the 2016 Trimpmas event, with the old style TrimpmasSnow.
+        for (var x = 0; x < game.global.gridArray.length; x++) {
+            if (game.global.gridArray[x].mutation == "TrimpmasSnow") delete game.global.gridArray[x].mutation;
         }
-        if (oldVersion < 4.3) {
-            if (game.global.Geneticistassist) addNewSetting("geneSend");
-            addNewSetting("fireForJobs");
-            if (game.global.highestLevelCleared >= 59) addNewSetting("ctrlGigas");
-            if (game.global.spentEssence > 0) respecTalents(false, true);
+    }
+    if (oldVersion < 4.814) {
+        if (oldVersion > 2.8) {
+            var resources = ["food", "wood", "metal", "gems", "fragments"];
+            var newAvgs = {};
+            for (var x = 0; x < resources.length; x++) {
+                var res = resources[x];
+                newAvgs[res] = {
+                    accumulator: 0,
+                    average:
+                        game.global.lootAvgs[res].reduce(function (a, b) {
+                            return a + b;
+                        }, 0) / (game.global.lootAvgs[res].length || 1),
+                };
+            }
+            game.global.lootAvgs = newAvgs;
         }
-        if (oldVersion < 4.31 && game.global.world >= 230) {
-            game.stats.decayedNurseries.value = game.buildings.Nursery.purchased - game.buildings.Nursery.owned;
-        }
-        if (oldVersion < 4.5 && typeof game.portal.Looting_II !== "undefined" && game.portal.Looting_II.locked == false) {
-            game.global.spiresCompleted = 1;
-            game.global.b += 20;
+        game.settings.ewma_alpha = 0.05;
+        game.settings.ewma_ticks = 10;
+    }
+    if (oldVersion < 4.9) {
+        if (game.global.spentEssence > 0) {
+            respecTalents(true, true);
             message(
-                "Welcome to Patch 4.5! Since you have already cleared Spire I, you have been given 20 bones and earned 5% Zone Liqufication. Click 'What's New' to see what's new!",
-                "Story",
+                "<span style='color: #1ab1d6; font-size: 1.2em;'>WELCOME TO 4.9!</span> Due to a rework of the current Masteries, all of your spent Dark Essence has been refunded for free! Don't forget to repurchase your Masteries!",
+                "Notices",
+                null,
+                "patchNotice",
             );
         }
-        if (oldVersion < 4.6) {
-            if (game.global.highestLevelCleared >= 79) addNewSetting("bigPopups");
-            if (game.talents.bionic.purchased) game.talents.bionic.onPurchase();
-            // sessionMapValues Will break things after 4.7
-            // preset.specMod = "0";
-            // preset.perf = false;
-            // preset.extra = 0;
-            game.jobs.Explorer.modifier *= 4;
-            var booksNeeded = Math.floor((game.global.world - 10) / 10);
-            if (booksNeeded > 0) {
-                for (var x = 0; x < booksNeeded; x++) {
-                    unlockUpgrade("Speedexplorer");
-                    game.mapUnlocks.Speedexplorer.next += 10;
+        if (game.global.spiresCompleted >= 5) {
+            game.portal.Classy.locked = false;
+            message(
+                "Since you've previously cleared Spire V, you've unlocked the brand new <b>Classy</b> perk!",
+                "Notices",
+                null,
+                "patchNotice",
+            );
+        }
+        game.global.mapPresets.p1.offset = "d";
+        game.global.mapPresets.p2.offset = "d";
+        game.global.mapPresets.p3.offset = "d";
+        addNewFeats([8, 20, 28, 43, 46, 47]);
+        if (game.global.spiresCompleted >= 1) {
+            var bonus = Math.pow(4, game.global.spiresCompleted);
+            message(
+                "Since you've previously cleared " +
+                    game.global.spiresCompleted +
+                    " Spires, you've gained a " +
+                    bonus +
+                    "x bonus to all Dark Essence drops! Each new Spire you clear will increase this by another 4x.",
+                "Notices",
+                null,
+                "patchNotice",
+            );
+        }
+        Fluffy.calculateInfo();
+        if (Fluffy.isRewardActive("void")) {
+            var mapsRemoved = 0;
+            for (var x = game.global.mapsOwnedArray.length; x >= 0; x--) {
+                var thisMap = game.global.mapsOwnedArray[x];
+                if (!thisMap) continue;
+                if (game.global.lookingAtMap == thisMap.id || game.global.currentMapId == thisMap.id) continue;
+                if (thisMap.location != "Void") continue;
+                game.global.totalVoidMaps--;
+                game.global.mapsOwnedArray.splice(x, 1);
+                game.global.mapsOwned--;
+                mapsRemoved++;
+            }
+            for (var y = 0; y < mapsRemoved; y++) {
+                createVoidMap(false, false, true);
+            }
+        }
+    }
+    if (oldStringVersion == null) {
+        //Last version was pre 4.10.0. Run compat code for 4.10.0
+        if (game.global.spiresCompleted >= 1) {
+            playerSpire.init();
+            playerSpire.spirestones = 20;
+            playerSpire.openPopup();
+        }
+        if (game.achievements.oneOffs.finished.length < 48) {
+            for (var x = game.achievements.oneOffs.finished.length; x < 48; x++) {
+                game.achievements.oneOffs.finished[x] = false;
+            }
+        }
+        addNewFeats([9, 30, 31, 36, 48, 49, 50, 51, 56, 57, 58, 59]);
+        if (game.global.recentDailies.length >= 7) giveSingleAchieve("Now What");
+        oldStringVersion = [4, 10, 0];
+    } else {
+        oldStringVersion = [
+            parseInt(oldStringVersion[0], 10),
+            parseInt(oldStringVersion[1], 10),
+            parseInt(oldStringVersion[2], 10),
+        ];
+    }
+    //Last version was at least 4.10.0, continue as normal
+    if (compareVersion([4, 10, 2], oldStringVersion)) {
+        //Bug fix for a few missing spires
+        if (game.global.spiresCompleted >= 1 && !playerSpire.initialized) {
+            playerSpire.init();
+            playerSpire.spirestones = 20;
+            playerSpire.openPopup();
+        }
+    }
+    if (compareVersion([4, 11, 0], oldStringVersion)) {
+        if (game.global.freeTalentRespecs < 3) game.global.freeTalentRespecs++;
+    }
+    if (compareVersion([5, 0, 0], oldStringVersion)) {
+        //Create backup of old save
+        if (unparsedSave) {
+            try {
+                localStorage.setItem("trimpBackup1", unparsedSave);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        //Give Nu for value of current Heirlooms
+        var spentValue = 0;
+        if (game.global.ShieldEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.ShieldEquipped, true);
+        if (game.global.StaffEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.StaffEquipped, true);
+        for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
+            var loom = game.global.heirloomsCarried[hc];
+            if (loom.type == "Core") continue;
+            spentValue += getTotalHeirloomRefundValue(loom, true);
+        }
+        for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
+            var loom = game.global.heirloomsExtra[he];
+            if (loom.type == "Core") continue;
+            spentValue += getTotalHeirloomRefundValue(loom, true);
+        }
+        game.global.nullifium += spentValue;
+        //Talent Conversion
+        if (savegame.talents) {
+            game.talents.heirloom.purchased = savegame.talents.turkimp2 && savegame.talents.turkimp2.purchased;
+            game.talents.turkimp2.purchased = savegame.talents.turkimp3 && savegame.talents.turkimp3.purchased;
+            game.talents.heirloom2.purchased = savegame.talents.turkimp4 && savegame.talents.turkimp4.purchased;
+            game.talents.mapHealth.purchased = savegame.talents.nature && savegame.talents.nature.purchased;
+            game.talents.nature.purchased = savegame.talents.nature2 && savegame.talents.nature2.purchased;
+            game.talents.nature2.purchased = savegame.talents.nature3 && savegame.talents.nature3.purchased;
+            game.global.freeTalentRespecs++;
+            if (game.global.freeTalentRespecs > 3) game.global.freeTalentRespecs = 3;
+        }
+        //Convert Perk Presets
+        if (typeof savegame.global.perkPreset1 !== "undefined") {
+            game.global.perkPresetU1.perkPreset1 = savegame.global.perkPreset1;
+            game.global.perkPresetU1.perkPreset2 = savegame.global.perkPreset2;
+            game.global.perkPresetU1.perkPreset3 = savegame.global.perkPreset3;
+        }
+        game.portal.Classy.max = 75;
+        //U2 Message for people above E8L10
+        if (game.global.fluffyPrestige > 8) {
+            cancelTooltip();
+            tooltip("A Whole New World", null, "update");
+            noOfflineTooltip = true;
+        }
+    }
+    if (compareVersion([5, 0, 3], oldStringVersion)) {
+        if (game.global.highestRadonLevelCleared > 0) {
+            game.global.voidMaxLevel2 = game.global.highestRadonLevelCleared;
+            game.global.voidMaxLevel = game.global.lastPortal;
+        }
+    }
+    if (compareVersion([5, 0, 4], oldStringVersion)) {
+        game.portal.Trumps.locked = false;
+    }
+    if (compareVersion([5, 1, 0], oldStringVersion)) {
+        if (savegame.options && savegame.options.menu) {
+            if (savegame.options.menu.mapAtZone) {
+                var arr = [];
+                for (var x = 0; x < savegame.options.menu.mapAtZone.setZone.length; x++) {
+                    arr.push({
+                        world: savegame.options.menu.mapAtZone.setZone[x],
+                        check: false,
+                        preset: 0,
+                        repeat: 0,
+                        until: 0,
+                        exit: 0,
+                        bwWorld: 125,
+                    });
                 }
-            }
-            for (var item in game.c2) {
-                if (savegame.challenges && savegame.challenges[item] && savegame.challenges[item].highestSquared)
-                    game.c2[item] = savegame.challenges[item].highestSquared;
-            }
-            addNewFeats([3, 6, 19, 20, 25, 26, 30, 31, 32, 33, 34, 35]);
-            countChallengeSquaredReward();
-            if (checkLowestHeirloom() >= 7) giveSingleAchieve("Swagmatic");
-        } else if (oldVersion < 4.601) {
-            //only run if game was already on 4.6
-            game.mapUnlocks.Speedexplorer.next -= 10;
-        }
-        if (oldVersion < 4.602) {
-            game.global.messages.Loot.cache = true;
-        }
-        if (oldVersion < 4.603 && typeof game.global.messages.Loot.token === "undefined") {
-            game.global.messages.Loot.token = true;
-        }
-        if (oldVersion < 4.7) {
-            if (oldVersion >= 4.6) game.global.mapPresets.p1 = savegame.global.sessionMapValues;
-            if (game.global.spiresCompleted >= 2) game.portal.Capable.locked = false;
-            if (game.global.spiresCompleted >= 3) game.portal.Cunning.locked = false;
-            if (game.global.spiresCompleted >= 4) game.portal.Curious.locked = false;
-            addNewSetting("smallPerks");
-            if (game.options.menu.masteryTab.lockUnless()) addNewSetting("masteryTab");
-            game.global.messages.Loot.bone = true;
-        }
-        if (oldVersion < 4.71) {
-            if (game.global.challengeActive == "Trimp" && game.global.world >= 230) {
-                if (game.upgrades.Coordination.done > 0) {
-                    game.global.capTrimp = true;
-                    message(
-                        "I'm terribly sorry, but your Trimp<sup>2</sup> run appears to have more than one Trimp fighting, which kinda defeats the purpose. Your score for this Challenge<sup>2</sup> will be capped at 230.",
-                        "Notices",
-                    );
-                } else {
-                    game.upgrades.Coordination.allowed = 0;
-                    game.upgrades.Coordination.locked = true;
-                    game.challenges.Trimp.heldBooks += 100;
-                }
-            }
-            if (game.c2.Trimp > 230) game.c2.Trimp = 230;
-            countChallengeSquaredReward();
-        }
-        if (oldVersion < 4.8) {
-            game.options.menu.mapAtZone.setZone = [game.options.menu.mapAtZone.setZone];
-            if (savegame.unlocks && savegame.unlocks.quickTrimps) game.singleRunBonuses.quickTrimps.owned = true;
-            if (savegame.unlocks && savegame.unlocks.goldMaps) game.singleRunBonuses.goldMaps.owned = true;
-            checkAchieve("dailyHelium");
-            checkAchieve("totalHeirlooms");
-            reevaluateTimedAchieve("spireTimed");
-            reevaluateTimedAchieve("spire2Timed");
-            reevaluateTimedAchieve("spire4Timed");
-            addNewFeats([0, 33, 38, 39, 40, 41]);
-            calculateAchievementBonus();
-        }
-        if (oldVersion < 4.801) {
-            if (countPurchasedTalents() == 40) game.global.essence = 0;
-        }
-        if (oldVersion < 4.813) {
-            //Fix for people who haven't played since the 2016 Trimpmas event, with the old style TrimpmasSnow.
-            for (var x = 0; x < game.global.gridArray.length; x++) {
-                if (game.global.gridArray[x].mutation == "TrimpmasSnow") delete game.global.gridArray[x].mutation;
-            }
-        }
-        if (oldVersion < 4.814) {
-            if (oldVersion > 2.8) {
-                var resources = ["food", "wood", "metal", "gems", "fragments"];
-                var newAvgs = {};
-                for (var x = 0; x < resources.length; x++) {
-                    var res = resources[x];
-                    newAvgs[res] = {
-                        accumulator: 0,
-                        average:
-                            game.global.lootAvgs[res].reduce(function (a, b) {
-                                return a + b;
-                            }, 0) / (game.global.lootAvgs[res].length || 1),
-                    };
-                }
-                game.global.lootAvgs = newAvgs;
-            }
-            game.settings.ewma_alpha = 0.05;
-            game.settings.ewma_ticks = 10;
-        }
-        if (oldVersion < 4.9) {
-            if (game.global.spentEssence > 0) {
-                respecTalents(true, true);
-                message(
-                    "<span style='color: #1ab1d6; font-size: 1.2em;'>WELCOME TO 4.9!</span> Due to a rework of the current Masteries, all of your spent Dark Essence has been refunded for free! Don't forget to repurchase your Masteries!",
-                    "Notices",
-                    null,
-                    "patchNotice",
-                );
-            }
-            if (game.global.spiresCompleted >= 5) {
-                game.portal.Classy.locked = false;
-                message(
-                    "Since you've previously cleared Spire V, you've unlocked the brand new <b>Classy</b> perk!",
-                    "Notices",
-                    null,
-                    "patchNotice",
-                );
-            }
-            game.global.mapPresets.p1.offset = "d";
-            game.global.mapPresets.p2.offset = "d";
-            game.global.mapPresets.p3.offset = "d";
-            addNewFeats([8, 20, 28, 43, 46, 47]);
-            if (game.global.spiresCompleted >= 1) {
-                var bonus = Math.pow(4, game.global.spiresCompleted);
-                message(
-                    "Since you've previously cleared " +
-                        game.global.spiresCompleted +
-                        " Spires, you've gained a " +
-                        bonus +
-                        "x bonus to all Dark Essence drops! Each new Spire you clear will increase this by another 4x.",
-                    "Notices",
-                    null,
-                    "patchNotice",
-                );
-            }
-            Fluffy.calculateInfo();
-            if (Fluffy.isRewardActive("void")) {
-                var mapsRemoved = 0;
-                for (var x = game.global.mapsOwnedArray.length; x >= 0; x--) {
-                    var thisMap = game.global.mapsOwnedArray[x];
-                    if (!thisMap) continue;
-                    if (game.global.lookingAtMap == thisMap.id || game.global.currentMapId == thisMap.id) continue;
-                    if (thisMap.location != "Void") continue;
-                    game.global.totalVoidMaps--;
-                    game.global.mapsOwnedArray.splice(x, 1);
-                    game.global.mapsOwned--;
-                    mapsRemoved++;
-                }
-                for (var y = 0; y < mapsRemoved; y++) {
-                    createVoidMap(false, false, true);
-                }
-            }
-        }
-        if (oldStringVersion == null) {
-            //Last version was pre 4.10.0. Run compat code for 4.10.0
-            if (game.global.spiresCompleted >= 1) {
-                playerSpire.init();
-                playerSpire.spirestones = 20;
-                playerSpire.openPopup();
-            }
-            if (game.achievements.oneOffs.finished.length < 48) {
-                for (var x = game.achievements.oneOffs.finished.length; x < 48; x++) {
-                    game.achievements.oneOffs.finished[x] = false;
-                }
-            }
-            addNewFeats([9, 30, 31, 36, 48, 49, 50, 51, 56, 57, 58, 59]);
-            if (game.global.recentDailies.length >= 7) giveSingleAchieve("Now What");
-            oldStringVersion = [4, 10, 0];
-        } else {
-            oldStringVersion = [
-                parseInt(oldStringVersion[0], 10),
-                parseInt(oldStringVersion[1], 10),
-                parseInt(oldStringVersion[2], 10),
-            ];
-        }
-        //Last version was at least 4.10.0, continue as normal
-        if (compareVersion([4, 10, 2], oldStringVersion)) {
-            //Bug fix for a few missing spires
-            if (game.global.spiresCompleted >= 1 && !playerSpire.initialized) {
-                playerSpire.init();
-                playerSpire.spirestones = 20;
-                playerSpire.openPopup();
-            }
-        }
-        if (compareVersion([4, 11, 0], oldStringVersion)) {
-            if (game.global.freeTalentRespecs < 3) game.global.freeTalentRespecs++;
-        }
-        if (compareVersion([5, 0, 0], oldStringVersion)) {
-            //Create backup of old save
-            if (unparsedSave) {
-                try {
-                    localStorage.setItem("trimpBackup1", unparsedSave);
-                } catch (e) {
-                    console.log(e);
-                }
-            }
-            //Give Nu for value of current Heirlooms
-            var spentValue = 0;
-            if (game.global.ShieldEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.ShieldEquipped, true);
-            if (game.global.StaffEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.StaffEquipped, true);
-            for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
-                var loom = game.global.heirloomsCarried[hc];
-                if (loom.type == "Core") continue;
-                spentValue += getTotalHeirloomRefundValue(loom, true);
-            }
-            for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
-                var loom = game.global.heirloomsExtra[he];
-                if (loom.type == "Core") continue;
-                spentValue += getTotalHeirloomRefundValue(loom, true);
-            }
-            game.global.nullifium += spentValue;
-            //Talent Conversion
-            if (savegame.talents) {
-                game.talents.heirloom.purchased = savegame.talents.turkimp2 && savegame.talents.turkimp2.purchased;
-                game.talents.turkimp2.purchased = savegame.talents.turkimp3 && savegame.talents.turkimp3.purchased;
-                game.talents.heirloom2.purchased = savegame.talents.turkimp4 && savegame.talents.turkimp4.purchased;
-                game.talents.mapHealth.purchased = savegame.talents.nature && savegame.talents.nature.purchased;
-                game.talents.nature.purchased = savegame.talents.nature2 && savegame.talents.nature2.purchased;
-                game.talents.nature2.purchased = savegame.talents.nature3 && savegame.talents.nature3.purchased;
-                game.global.freeTalentRespecs++;
-                if (game.global.freeTalentRespecs > 3) game.global.freeTalentRespecs = 3;
-            }
-            //Convert Perk Presets
-            if (typeof savegame.global.perkPreset1 !== "undefined") {
-                game.global.perkPresetU1.perkPreset1 = savegame.global.perkPreset1;
-                game.global.perkPresetU1.perkPreset2 = savegame.global.perkPreset2;
-                game.global.perkPresetU1.perkPreset3 = savegame.global.perkPreset3;
-            }
-            game.portal.Classy.max = 75;
-            //U2 Message for people above E8L10
-            if (game.global.fluffyPrestige > 8) {
-                cancelTooltip();
-                tooltip("A Whole New World", null, "update");
-                noOfflineTooltip = true;
-            }
-        }
-        if (compareVersion([5, 0, 3], oldStringVersion)) {
-            if (game.global.highestRadonLevelCleared > 0) {
-                game.global.voidMaxLevel2 = game.global.highestRadonLevelCleared;
-                game.global.voidMaxLevel = game.global.lastPortal;
-            }
-        }
-        if (compareVersion([5, 0, 4], oldStringVersion)) {
-            game.portal.Trumps.locked = false;
-        }
-        if (compareVersion([5, 1, 0], oldStringVersion)) {
-            if (savegame.options && savegame.options.menu) {
-                if (savegame.options.menu.mapAtZone) {
-                    var arr = [];
-                    for (var x = 0; x < savegame.options.menu.mapAtZone.setZone.length; x++) {
+                game.options.menu.mapAtZone.setZone = arr;
+                if (savegame.options.menu.mapAtZone.setZoneU2) {
+                    arr = [];
+                    for (var x = 0; x < savegame.options.menu.mapAtZone.setZoneU2.length; x++) {
                         arr.push({
-                            world: savegame.options.menu.mapAtZone.setZone[x],
+                            world: savegame.options.menu.mapAtZone.setZoneU2[x],
                             check: false,
                             preset: 0,
                             repeat: 0,
@@ -929,442 +968,436 @@ function load(saveString) {
                             bwWorld: 125,
                         });
                     }
-                    game.options.menu.mapAtZone.setZone = arr;
-                    if (savegame.options.menu.mapAtZone.setZoneU2) {
-                        arr = [];
-                        for (var x = 0; x < savegame.options.menu.mapAtZone.setZoneU2.length; x++) {
-                            arr.push({
-                                world: savegame.options.menu.mapAtZone.setZoneU2[x],
-                                check: false,
-                                preset: 0,
-                                repeat: 0,
-                                until: 0,
-                                exit: 0,
-                                bwWorld: 125,
-                            });
-                        }
-                        game.options.menu.mapAtZone.setZoneU2 = arr;
-                    }
+                    game.options.menu.mapAtZone.setZoneU2 = arr;
                 }
             }
-            if (game.global.ShieldEquipped.name) {
-                game.global.ShieldEquipped.id = 1;
-                game.global.ShieldEquipped.icon = "*shield3";
-            }
-            if (game.global.StaffEquipped.name) {
-                game.global.StaffEquipped.id = 2;
-                game.global.StaffEquipped.icon = "grain";
-            }
-            if (game.global.CoreEquipped.name) game.global.CoreEquipped.icon = "adjust";
-            for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
-                var loom = game.global.heirloomsCarried[hc];
-                loom.id = 3 + hc;
-                var type = loom.type;
-                loom.icon = type == "Core" ? "adjust" : type == "Shield" ? "*shield3" : "grain";
-            }
-            for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
-                var loom = game.global.heirloomsExtra[he];
-                loom.id = 3 + game.global.heirloomsCarried.length + he;
-                var type = loom.type;
-                loom.icon = type == "Core" ? "adjust" : type == "Shield" ? "*shield3" : "grain";
-            }
-            if (game.buildings.Microchip.owned > 5) game.buildings.Microchip.owned = 5;
         }
-        if (compareVersion([5, 3, 0], oldStringVersion)) {
-            if (game.global.freeTalentRespecs < 3) game.global.freeTalentRespecs++;
-            if (savegame.talents) {
-                game.talents.herbalist.purchased = savegame.talents.foreman && savegame.talents.foreman.purchased;
-                if (savegame.talents.foreman && savegame.talents.foreman.purchased && game.global.roboTrimpLevel == 0) {
-                    //Probably isn't possible that someone had a t2 mastery without ever doing a BW but you never know
-                    game.global.autoCraftModifier -= 12500;
-                    updateForemenCount();
-                } else if (
-                    (!savegame.talents.foreman || !savegame.talents.foreman.purchased) &&
-                    game.global.roboTrimpLevel >= 1
-                ) {
-                    game.global.autoCraftModifier += 12500;
-                    updateForemenCount();
-                }
-                game.talents.mapHealth.purchased = savegame.talents.doubleBuild && savegame.talents.doubleBuild.purchased;
-                game.talents.maz.purchased = savegame.talents.mapHealth && savegame.talents.mapHealth.purchased;
-                game.talents.mapBattery.purchased = savegame.talents.autoJobs && savegame.talents.autoJobs.purchased;
-                if (savegame.talents.autoJobs && savegame.talents.autoJobs.purchased && game.global.roboTrimpLevel < 2) {
-                    toggleAutoJobs(true, true);
-                }
-                game.talents.magimp.purchased = savegame.talents.autoStructure && savegame.talents.autoStructure.purchased;
-                if (
-                    savegame.talents.autoStructure &&
-                    savegame.talents.autoStructure.purchased &&
-                    game.global.roboTrimpLevel < 3
-                ) {
-                    toggleAutoStructure(true, true);
-                }
-            }
-            game.global.lootAvgs.science = { average: 0, accumulator: 0 };
-            game.achievements.oneOffs2.finished.push(false);
-            game.global.autoGoldenU2 = game.global.autoGolden;
-            if (game.global.roboTrimpLevel > 0) {
-                noOfflineTooltip = true;
-                var text =
-                    "<b style='font-size: 1.5em; color: blue'>Welcome to Patch 5.3.0!</b> For your past completions of " +
-                    game.global.roboTrimpLevel +
-                    " unique Bionic Wonderland Tier" +
-                    needAnS(game.global.roboTrimpLevel) +
-                    ", you have unlocked the following permanent special bonuses: Foremany (Permanently adds 50000 Foreman to your town to aid in construction)";
-                if (game.global.roboTrimpLevel > 1) text += ", AutoJobs";
-                if (game.global.roboTrimpLevel > 2) text += ", AutoStructure";
-                if (game.global.roboTrimpLevel > 4)
-                    text += ", and Double Build (Stacked items in the Building Queue will be constructed two at a time)";
-                text += ".";
-                if (game.global.highestLevelCleared >= 179)
-                    text +=
-                        " As these bonuses were previously Masteries and are now not, new Masteries have been added to replace these!";
-                text +=
-                    "<br/><br/>A lot of other new stuff has just been added to Trimps as well, click <a target='_blank' href='https://trimps.github.io/updates.html'>What's New</a> in the bottom right of your game window to see the full patch notes!";
-                tooltip("confirm", null, "update", text, null, "Welcome to 5.3.0", "Got it!", null, true);
-            }
+        if (game.global.ShieldEquipped.name) {
+            game.global.ShieldEquipped.id = 1;
+            game.global.ShieldEquipped.icon = "*shield3";
         }
-        if (compareVersion([5, 4, 0], oldStringVersion)) {
-            if (game.portal.Overkill.radLevel) {
-                game.portal.Hunger.radLevel = game.portal.Overkill.radLevel;
-                game.portal.Hunger.radSpent = game.portal.Overkill.radSpent;
-                game.portal.Overkill.radLevel = 0;
-                game.portal.Overkill.radSpent = 0;
-            }
-            if (!game.portal.Overkill.radLocked) {
-                game.portal.Hunger.radLocked = false;
-            }
-            game.portal.Overkill.radLocked = true;
-            if (game.global.fluffyPrestige2 > 0) game.global.fluffyExp2 += 349525000;
-            game.global.fluffyPrestige2 = 0;
-            game.global.mapPresets.p4 = Object.assign({}, game.global.mapPresets.p1);
-            game.global.mapPresets.p5 = Object.assign({}, game.global.mapPresets.p2);
-            game.global.mapPresets2.p4 = Object.assign({}, game.global.mapPresets2.p1);
-            game.global.mapPresets2.p5 = Object.assign({}, game.global.mapPresets2.p2);
-            game.global.messages.Loot.exp = true;
-            if (game.global.universe == 2 && game.global.world > 50) unlockJob("Worshipper");
-            if (game.global.mayhemCompletions > game.challenges.Mayhem.maxRuns)
-                game.global.mayhemCompletions = game.challenges.Mayhem.maxRuns;
-            for (var x = 0; x < 4; x++) game.achievements.oneOffs2.finished.push(false);
+        if (game.global.StaffEquipped.name) {
+            game.global.StaffEquipped.id = 2;
+            game.global.StaffEquipped.icon = "grain";
         }
-        if (compareVersion([5, 5, 0], oldStringVersion)) {
-            if (game.global.challengeActive == "Archaeology" && game.global.world >= 91)
-                game.challenges.Archaeology.onComplete();
-            if (savegame.portal.Equality) {
-                savegame.portal.Equality.reversingSetting = savegame.portal.Equality.scalingSetting + 1;
-                if (savegame.portal.Equality.reversingSetting > 10) savegame.portal.Equality.reversingSetting = 10;
-            }
-            addNewFeats([10, 11, 19, 20, 21, 22], true);
-            checkAchieve("zones2");
-            checkAchieve("totalRadon");
-            if (game.global.highestRadonLevelCleared >= 74) {
-                noOfflineTooltip = true;
-                autoBattle.firstUnlock();
-            }
-            if (game.portal.Observation.trinkets >= 7500) giveSingleAchieve("Heavy Trinker");
-            if (game.global.mayhemCompletions >= 25) giveSingleAchieve("Peace");
+        if (game.global.CoreEquipped.name) game.global.CoreEquipped.icon = "adjust";
+        for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
+            var loom = game.global.heirloomsCarried[hc];
+            loom.id = 3 + hc;
+            var type = loom.type;
+            loom.icon = type == "Core" ? "adjust" : type == "Shield" ? "*shield3" : "grain";
         }
-        if (compareVersion([5, 6, 0], oldStringVersion)) {
-            addNewFeats([23, 24], true);
+        for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
+            var loom = game.global.heirloomsExtra[he];
+            loom.id = 3 + game.global.heirloomsCarried.length + he;
+            var type = loom.type;
+            loom.icon = type == "Core" ? "adjust" : type == "Shield" ? "*shield3" : "grain";
         }
-        if (compareVersion([5, 7, 0], oldStringVersion)) {
-            addNewSetting("equipHighlight");
-            if (game.global.highestRadonLevelCleared < 154 && typeof game.global.messages.Loot.alchemy !== "undefined")
-                delete game.global.messages.Loot.alchemy;
-            if (savegame && savegame.talents && savegame.talents.deciBuild && savegame.talents.deciBuild.purchased)
-                game.talents.kerfluffle.purchased = true;
-        }
-        if (compareVersion([5, 7, 2], oldStringVersion)) {
-            game.global.messages.Loot.voidMaps = true;
-        }
-        if (compareVersion([5, 8, 0], oldStringVersion)) {
-            if (game.global.universe == 1) {
-                for (var x = 0; x < game.global.mapsOwnedArray.length; x++) {
-                    var map = game.global.mapsOwnedArray[x];
-                    if (map.location != "Void") continue;
-                    if (game.global.world <= 199) {
-                        if (game.global.world >= 60) {
-                            map.difficulty--;
-                        } else {
-                            map.difficulty /= 2;
-                        }
-                    } else {
-                        map.loot++;
-                    }
-                }
-            }
-            if (game.global.highestRadonLevelCleared >= 200) {
-                game.global.tabForMastery = false;
-                document.getElementById("MasteryTabName").innerHTML = "Mutators";
-            }
-            checkAchieve("zones");
-            checkAchieve("dailyHelium");
-            addNewFeats([25, 26], true);
-            checkAchieve("totalGems");
-            game.stats.runetrinkets.valueTotal = game.portal.Observation.trinkets;
-        }
-        if (compareVersion([5, 9, 0], oldStringVersion)) {
-            if (autoBattle.maxEnemyLevel > 150) autoBattle.maxEnemyLevel = 150;
-            if (autoBattle.enemyLevel > 150) autoBattle.enemyLevel = 150;
-            var spentValue = 0;
-            if (game.global.CoreEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.CoreEquipped, true);
-            for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
-                var loom = game.global.heirloomsCarried[hc];
-                if (loom.type != "Core") continue;
-                spentValue += getTotalHeirloomRefundValue(loom, true);
-            }
-            for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
-                var loom = game.global.heirloomsExtra[he];
-                if (loom.type != "Core") continue;
-                spentValue += getTotalHeirloomRefundValue(loom, true);
-            }
-            playerSpire.spirestones += spentValue;
-            if (game.global.maxCarriedHeirlooms < game.heirlooms.values.length) {
-                for (var mch = game.global.maxCarriedHeirlooms; mch < game.heirlooms.values.length; mch++) {
-                    var cost = getNextCarriedCost();
-                    if (cost < game.global.nullifium) game.global.maxCarriedHeirlooms++;
-                    else break;
-                }
-            }
-            getHazardParityMult();
-            getHazardGammaBonus();
-        }
-        if (compareVersion([5, 10, 0], oldStringVersion)) {
-            if (playerSpire.rowsAllowed >= 20) giveSingleAchieve("Power Tower");
-            if (savegame.portal.Equality) {
-                game.portal.Equality.settings.reg = {
-                    scalingActive: savegame.portal.Equality.scalingActive,
-                    scalingSetting: savegame.portal.Equality.scalingSetting,
-                    reversingSetting: savegame.portal.Equality.reversingSetting,
-                    scalingReverse: savegame.portal.Equality.scalingActive,
-                    disabledStackCount: savegame.portal.Equality.disabledStackCount,
-                };
-            }
-            var bestU2Voids = 0;
-            if (game.global.universe == 2) {
-                bestU2Voids = game.stats.totalVoidMaps.value;
-                game.stats.mostU2Voids.value = bestU2Voids;
-            }
-            if (game.global.lastU2Voids > bestU2Voids) bestU2Voids = game.global.lastU2Voids;
-            game.stats.mostU2Voids.valueTotal = bestU2Voids;
-            autoBattle.checkAddRingSlot();
-            game.global.autoUpgrades = game.global.autoUpgrades ? 1 : 0;
-        }
-        //End compatibility
-        //Test server only
-
-        //End test server only
-        //Temporary until next patch
-
-        //End Temporary
-        portalUniverse = game.global.universe;
-        Fluffy.handleBox();
-        if (!getCurrentMapObject()) {
-            game.global.currentMapId = "";
-            game.global.mapGridArray = [];
-            game.global.lastClearedMapCell = -1;
-        }
-
-        if (game.buildings.Gym.locked === 0) document.getElementById("blockDiv").style.visibility = "visible";
-        if (getEnergyShieldMult() > 0 && game.upgrades.Battle.done)
-            document.getElementById("blockDiv").style.visibility = "visible";
-
-        if (game.global.gridArray.length > 0) {
-            document.getElementById("battleContainer").style.visibility = "visible";
-            fadeIn("equipmentTab", 10);
-            fadeIn("equipmentTitleDiv", 10);
-            drawGrid();
-            if (checkIfSpireWorld() && !game.global.spireActive) clearSpireMetals();
-            document.getElementById("metal").style.visibility = "visible";
-            for (var x = 0; x <= game.global.lastClearedCell; x++) {
-                swapClass("cellColor", "cellColorBeaten", document.getElementById("cell" + x));
-            }
-            if (game.global.battleClock > 0) document.getElementById("battleTimer").style.visibility = "visible";
-        }
-        if (game.global.mapGridArray.length > 0 && game.global.currentMapId !== "") {
-            drawGrid(true);
-            for (var y = 0; y <= game.global.lastClearedMapCell; y++) {
-                swapClass("cellColor", "cellColorBeaten", document.getElementById("mapCell" + y));
-            }
-        } else if (game.global.mapGridArray.length === 0 && game.global.mapsActive) game.global.mapsActive = false;
-        if (game.resources.trimps.owned > 0 || game.buildings.Trap.owned > 0) game.buildings.Trap.first();
-        if (game.global.autoBattle) {
-            fadeIn("pauseFight", 1);
-            pauseFight(true);
-        }
-        for (var itemC in game.global.mapsOwnedArray) {
-            if (game.global.mapsOwnedArray[itemC].name == "Dimension of Anger") game.global.mapsOwnedArray[itemC].level = 20;
-            unlockMap(itemC);
-        }
-        for (var messageBool in game.global.messages) {
-            if (!game.global.messages[messageBool].enabled) {
-                filterMessage(messageBool, true);
-            }
-        }
-        game.global.buyTab = "all";
-        filterTabs("all");
-        if (game.global.mapsUnlocked) unlockMapStuff();
-        repeatClicked(true);
-        document.getElementById("worldNumber").innerHTML = game.global.world;
-        mapsSwitch(true);
-        checkTriggers(true);
-        toggleAutoTrap(true);
-        toggleAutoStructure(true);
-        toggleAutoJobs(true);
-        toggleAutoEquip(true);
-        toggleAutoGolden(true);
-        document.getElementById("goldConfig").style.display = game.global.canGuString ? "block" : "none";
-        setGather(game.global.playerGathering);
-        numTab(1);
-        if (game.global.portalActive) {
-            fadeIn("portalBtn", 10);
-            fadeIn("helium", 10);
-        } else if (game.resources.helium.owned > 0 || game.resources.radon.owned > 0) fadeIn("helium", 10);
-        document.getElementById("heliumName").innerHTML = heliumOrRadon();
-        document.getElementById("goodGuyBlockName").innerHTML =
-            game.global.universe == 2 ? "<span class='energyShieldIcon icomoon icon-shield2'></span>" : "BLK";
-        if (game.jobs.Explorer.locked === 0) fadeIn("fragmentsPs", 10);
-        if (game.buildings.Tribute.locked === 0 || game.options.menu.useAverages.enabled) fadeIn("gemsPs", 10);
-        if (game.global.autoCraftModifier > 0)
-            document.getElementById("foremenCount").innerHTML = game.global.autoCraftModifier * 4 + " Foremen";
-        if (game.global.fighting && game.global.soldierHealth <= 0) fight();
-        else if (game.global.fighting) startFight();
-        game.options.menu.darkTheme.onToggle();
-        updateLabels();
-        if (game.global.viewingUpgrades) {
-            viewPortalUpgrades();
-            if (game.global.respecActive) respecPerks();
-        } else game.global.respecActive = false;
-        if (game.global.kongBonusMode) activateKongBonus();
-        if (game.global.challengeActive !== "") {
-            var challengeList;
-            if (game.challenges[game.global.challengeActive].multiChallenge)
-                challengeList = game.challenges[game.global.challengeActive].multiChallenge;
-            else challengeList = [game.global.challengeActive];
-            for (var cha = 0; cha < challengeList.length; cha++) {
-                if (typeof game.challenges[challengeList[cha]].onLoad !== "undefined")
-                    game.challenges[challengeList[cha]].onLoad();
-            }
-        }
-        if (game.global.challengeActive != "Scientist") document.getElementById("scienceCollectBtn").style.display = "block";
-        if (game.global.brokenPlanet) {
-            document.getElementById("wrapper").style.background = "url(css/bg2_vert.png) center repeat-y";
-            document.getElementById("wrapper").className = "wrapperBroken";
-            if (game.global.roboTrimpLevel > 0) displayRoboTrimp();
-        }
-        if (challengeActive("Balance") || game.global.challengeActive == "Unbalance") {
-            updateBalanceStacks();
-        }
-        u2Mutations.checkStacks();
-        if (game.global.spireActive) handleExitSpireBtn();
-        game.options.displayed = false;
-        game.options.menu.barOutlines.onToggle();
-        game.options.menu.progressBars.onToggle();
-        game.options.menu.autoSave.onToggle();
-        game.options.menu.tinyButtons.onToggle();
-        if (usingScreenReader) game.options.menu.showSRInfo.onToggle();
-
-        displayPerksBtn();
-        displayGoldenUpgrades();
-        if (game.global.highestLevelCleared >= 180 && game.global.tabForMastery) updateTalentNumbers();
-        //3.6 bug fix
-        if (getAchievementStrengthLevel() <= 0) {
-            game.global.goldenUpgrades = 0;
-            for (var item in game.goldenUpgrades) {
-                game.goldenUpgrades[item].currentBonus = 0;
-            }
-        }
-        fireMode(true);
-
-        if (game.global.autoUpgradesAvailable) {
-            document.getElementById("autoUpgradeBtn").style.display = "block";
-            toggleAutoUpgrades(true);
-        }
-        if (game.global.sLevel >= 4) {
-            document.getElementById("autoPrestigeBtn").style.display = "block";
-            toggleAutoPrestiges(true);
-        }
-        if (game.global.autoStorageAvailable) {
-            document.getElementById("autoStorageBtn").style.display = "block";
-            toggleAutoStorage(true);
-        }
-        unlockFormation("all");
-        setFormation();
-        game.permaBoneBonuses.boosts.updateBtn();
-        toggleSetting("mapLoot", null, false, true);
-        toggleSetting("repeatUntil", null, false, true);
-        toggleSetting("exitTo", null, false, true);
-        toggleSetting("repeatVoids", null, false, true);
-        toggleSetting("mapAtZone", null, false, true);
-        game.global.removingPerks = false;
-        game.global.switchToMaps = false;
-
-        if (game.global.voidBuff) setVoidBuffTooltip();
-        if (game.upgrades.Gigastation.done >= 1) loadGigastations();
-        checkChallengeSquaredAllowed();
-
-        if (oldVersion < 2) {
-            if (game.global.world == 59) {
-                game.global.gridArray[99].name = "Improbability";
-                message("Your Scientists have detected an anomaly at the end of this Zone. Exercise caution.", "Notices");
-            } else if (game.global.world == 60 && game.global.lastClearedCell <= 10) {
-                planetBreaker();
-                game.global.world = 59;
-                nextWorld();
-            } else if (game.global.world >= 60) {
-                message(
-                    "There is a new anomaly at 59, but you are too far past to reach it. You will have to use your portal to see the changes it brings. It looks like you have access to a new challenge, however!",
-                    "Notices",
-                );
-            } else {
-                message(
-                    "Your scientists have detected an anomaly at the end of Zone 59. They warn you to be careful if you intend to approach it.",
-                    "Notices",
-                );
-            }
-        }
-        document.getElementById("tab5Text").innerHTML = "+" + prettify(game.global.lastCustomAmt);
-        game.global.lastUnlock = 0;
-        if (game.resources.gems.owned > 0) fadeIn("gems", 10);
-        updateSkeleBtn();
-        if (game.talents.turkimp2.purchased || game.global.turkimpTimer > 0)
-            document.getElementById("turkimpBuff").style.display = "block";
-        if (game.stats.totalHeirlooms.value + game.stats.totalHeirlooms.valueTotal > 0)
-            document.getElementById("heirloomBtnContainer").style.display = "block";
-        calculateAchievementBonus();
-        if (game.global.firing) swapClass("fireBtn", "fireBtnFiring", document.getElementById("fireBtn"));
-        else swapClass("fireBtn", "fireBtnNotFiring", document.getElementById("fireBtn"));
-        loadSingleBonusColors();
-        handlePoisonDebuff();
-        handleIceDebuff();
-        handleWindDebuff();
-        setEmpowerTab();
-        refreshMaps();
-        setAdvMaps2UnlockText();
-        countChallengeSquaredReward();
-        manageEqualityStacks();
-        setTrimpColSize();
-        setUniverseStyle();
-        if (game.global.tutorialActive) tutorial.load();
-        if (game.global.totalVoidMaps > 0 && !game.global.mapsActive) addVoidAlert();
-        if (!game.options.menu.pauseGame.enabled) {
-            //If not paused and offline progress is enabled, run offline progress
-            if (game.options.menu.offlineProgress.enabled) checkOfflineProgress(noOfflineTooltip);
-            //If not paused and offline progress is disabled, fix clock
-            else {
-                var timeToAdd = new Date().getTime() - game.global.lastOnline;
-                game.global.portalTime += timeToAdd;
-                game.global.zoneStarted += timeToAdd;
-            }
-        }
-        //If paused, set clock pulse
-        else {
-            handlePauseMessage(true);
-            updatePortalTimer();
-            document.getElementById("portalTimer").className = "timerPaused";
-        }
-        return true;
+        if (game.buildings.Microchip.owned > 5) game.buildings.Microchip.owned = 5;
     }
+    if (compareVersion([5, 3, 0], oldStringVersion)) {
+        if (game.global.freeTalentRespecs < 3) game.global.freeTalentRespecs++;
+        if (savegame.talents) {
+            game.talents.herbalist.purchased = savegame.talents.foreman && savegame.talents.foreman.purchased;
+            if (savegame.talents.foreman && savegame.talents.foreman.purchased && game.global.roboTrimpLevel == 0) {
+                //Probably isn't possible that someone had a t2 mastery without ever doing a BW but you never know
+                game.global.autoCraftModifier -= 12500;
+                updateForemenCount();
+            } else if (
+                (!savegame.talents.foreman || !savegame.talents.foreman.purchased) &&
+                game.global.roboTrimpLevel >= 1
+            ) {
+                game.global.autoCraftModifier += 12500;
+                updateForemenCount();
+            }
+            game.talents.mapHealth.purchased = savegame.talents.doubleBuild && savegame.talents.doubleBuild.purchased;
+            game.talents.maz.purchased = savegame.talents.mapHealth && savegame.talents.mapHealth.purchased;
+            game.talents.mapBattery.purchased = savegame.talents.autoJobs && savegame.talents.autoJobs.purchased;
+            if (savegame.talents.autoJobs && savegame.talents.autoJobs.purchased && game.global.roboTrimpLevel < 2) {
+                toggleAutoJobs(true, true);
+            }
+            game.talents.magimp.purchased = savegame.talents.autoStructure && savegame.talents.autoStructure.purchased;
+            if (
+                savegame.talents.autoStructure &&
+                savegame.talents.autoStructure.purchased &&
+                game.global.roboTrimpLevel < 3
+            ) {
+                toggleAutoStructure(true, true);
+            }
+        }
+        game.global.lootAvgs.science = { average: 0, accumulator: 0 };
+        game.achievements.oneOffs2.finished.push(false);
+        game.global.autoGoldenU2 = game.global.autoGolden;
+        if (game.global.roboTrimpLevel > 0) {
+            noOfflineTooltip = true;
+            var text =
+                "<b style='font-size: 1.5em; color: blue'>Welcome to Patch 5.3.0!</b> For your past completions of " +
+                game.global.roboTrimpLevel +
+                " unique Bionic Wonderland Tier" +
+                needAnS(game.global.roboTrimpLevel) +
+                ", you have unlocked the following permanent special bonuses: Foremany (Permanently adds 50000 Foreman to your town to aid in construction)";
+            if (game.global.roboTrimpLevel > 1) text += ", AutoJobs";
+            if (game.global.roboTrimpLevel > 2) text += ", AutoStructure";
+            if (game.global.roboTrimpLevel > 4)
+                text += ", and Double Build (Stacked items in the Building Queue will be constructed two at a time)";
+            text += ".";
+            if (game.global.highestLevelCleared >= 179)
+                text +=
+                    " As these bonuses were previously Masteries and are now not, new Masteries have been added to replace these!";
+            text +=
+                "<br/><br/>A lot of other new stuff has just been added to Trimps as well, click <a target='_blank' href='https://trimps.github.io/updates.html'>What's New</a> in the bottom right of your game window to see the full patch notes!";
+            tooltip("confirm", null, "update", text, null, "Welcome to 5.3.0", "Got it!", null, true);
+        }
+    }
+    if (compareVersion([5, 4, 0], oldStringVersion)) {
+        if (game.portal.Overkill.radLevel) {
+            game.portal.Hunger.radLevel = game.portal.Overkill.radLevel;
+            game.portal.Hunger.radSpent = game.portal.Overkill.radSpent;
+            game.portal.Overkill.radLevel = 0;
+            game.portal.Overkill.radSpent = 0;
+        }
+        if (!game.portal.Overkill.radLocked) {
+            game.portal.Hunger.radLocked = false;
+        }
+        game.portal.Overkill.radLocked = true;
+        if (game.global.fluffyPrestige2 > 0) game.global.fluffyExp2 += 349525000;
+        game.global.fluffyPrestige2 = 0;
+        game.global.mapPresets.p4 = Object.assign({}, game.global.mapPresets.p1);
+        game.global.mapPresets.p5 = Object.assign({}, game.global.mapPresets.p2);
+        game.global.mapPresets2.p4 = Object.assign({}, game.global.mapPresets2.p1);
+        game.global.mapPresets2.p5 = Object.assign({}, game.global.mapPresets2.p2);
+        game.global.messages.Loot.exp = true;
+        if (game.global.universe == 2 && game.global.world > 50) unlockJob("Worshipper");
+        if (game.global.mayhemCompletions > game.challenges.Mayhem.maxRuns)
+            game.global.mayhemCompletions = game.challenges.Mayhem.maxRuns;
+        for (var x = 0; x < 4; x++) game.achievements.oneOffs2.finished.push(false);
+    }
+    if (compareVersion([5, 5, 0], oldStringVersion)) {
+        if (game.global.challengeActive == "Archaeology" && game.global.world >= 91)
+            game.challenges.Archaeology.onComplete();
+        if (savegame.portal.Equality) {
+            savegame.portal.Equality.reversingSetting = savegame.portal.Equality.scalingSetting + 1;
+            if (savegame.portal.Equality.reversingSetting > 10) savegame.portal.Equality.reversingSetting = 10;
+        }
+        addNewFeats([10, 11, 19, 20, 21, 22], true);
+        checkAchieve("zones2");
+        checkAchieve("totalRadon");
+        if (game.global.highestRadonLevelCleared >= 74) {
+            noOfflineTooltip = true;
+            autoBattle.firstUnlock();
+        }
+        if (game.portal.Observation.trinkets >= 7500) giveSingleAchieve("Heavy Trinker");
+        if (game.global.mayhemCompletions >= 25) giveSingleAchieve("Peace");
+    }
+    if (compareVersion([5, 6, 0], oldStringVersion)) {
+        addNewFeats([23, 24], true);
+    }
+    if (compareVersion([5, 7, 0], oldStringVersion)) {
+        addNewSetting("equipHighlight");
+        if (game.global.highestRadonLevelCleared < 154 && typeof game.global.messages.Loot.alchemy !== "undefined")
+            delete game.global.messages.Loot.alchemy;
+        if (savegame && savegame.talents && savegame.talents.deciBuild && savegame.talents.deciBuild.purchased)
+            game.talents.kerfluffle.purchased = true;
+    }
+    if (compareVersion([5, 7, 2], oldStringVersion)) {
+        game.global.messages.Loot.voidMaps = true;
+    }
+    if (compareVersion([5, 8, 0], oldStringVersion)) {
+        if (game.global.universe == 1) {
+            for (var x = 0; x < game.global.mapsOwnedArray.length; x++) {
+                var map = game.global.mapsOwnedArray[x];
+                if (map.location != "Void") continue;
+                if (game.global.world <= 199) {
+                    if (game.global.world >= 60) {
+                        map.difficulty--;
+                    } else {
+                        map.difficulty /= 2;
+                    }
+                } else {
+                    map.loot++;
+                }
+            }
+        }
+        if (game.global.highestRadonLevelCleared >= 200) {
+            game.global.tabForMastery = false;
+            document.getElementById("MasteryTabName").innerHTML = "Mutators";
+        }
+        checkAchieve("zones");
+        checkAchieve("dailyHelium");
+        addNewFeats([25, 26], true);
+        checkAchieve("totalGems");
+        game.stats.runetrinkets.valueTotal = game.portal.Observation.trinkets;
+    }
+    if (compareVersion([5, 9, 0], oldStringVersion)) {
+        if (autoBattle.maxEnemyLevel > 150) autoBattle.maxEnemyLevel = 150;
+        if (autoBattle.enemyLevel > 150) autoBattle.enemyLevel = 150;
+        var spentValue = 0;
+        if (game.global.CoreEquipped.name) spentValue += getTotalHeirloomRefundValue(game.global.CoreEquipped, true);
+        for (var hc = 0; hc < game.global.heirloomsCarried.length; hc++) {
+            var loom = game.global.heirloomsCarried[hc];
+            if (loom.type != "Core") continue;
+            spentValue += getTotalHeirloomRefundValue(loom, true);
+        }
+        for (var he = 0; he < game.global.heirloomsExtra.length; he++) {
+            var loom = game.global.heirloomsExtra[he];
+            if (loom.type != "Core") continue;
+            spentValue += getTotalHeirloomRefundValue(loom, true);
+        }
+        playerSpire.spirestones += spentValue;
+        if (game.global.maxCarriedHeirlooms < game.heirlooms.values.length) {
+            for (var mch = game.global.maxCarriedHeirlooms; mch < game.heirlooms.values.length; mch++) {
+                var cost = getNextCarriedCost();
+                if (cost < game.global.nullifium) game.global.maxCarriedHeirlooms++;
+                else break;
+            }
+        }
+        getHazardParityMult();
+        getHazardGammaBonus();
+    }
+    if (compareVersion([5, 10, 0], oldStringVersion)) {
+        if (playerSpire.rowsAllowed >= 20) giveSingleAchieve("Power Tower");
+        if (savegame.portal.Equality) {
+            game.portal.Equality.settings.reg = {
+                scalingActive: savegame.portal.Equality.scalingActive,
+                scalingSetting: savegame.portal.Equality.scalingSetting,
+                reversingSetting: savegame.portal.Equality.reversingSetting,
+                scalingReverse: savegame.portal.Equality.scalingActive,
+                disabledStackCount: savegame.portal.Equality.disabledStackCount,
+            };
+        }
+        var bestU2Voids = 0;
+        if (game.global.universe == 2) {
+            bestU2Voids = game.stats.totalVoidMaps.value;
+            game.stats.mostU2Voids.value = bestU2Voids;
+        }
+        if (game.global.lastU2Voids > bestU2Voids) bestU2Voids = game.global.lastU2Voids;
+        game.stats.mostU2Voids.valueTotal = bestU2Voids;
+        autoBattle.checkAddRingSlot();
+        game.global.autoUpgrades = game.global.autoUpgrades ? 1 : 0;
+    }
+    //End compatibility
+    //Test server only
+
+    //End test server only
+    //Temporary until next patch
+
+    //End Temporary
+    portalUniverse = game.global.universe;
+    Fluffy.handleBox();
+    if (!getCurrentMapObject()) {
+        game.global.currentMapId = "";
+        game.global.mapGridArray = [];
+        game.global.lastClearedMapCell = -1;
+    }
+
+    if (game.buildings.Gym.locked === 0) document.getElementById("blockDiv").style.visibility = "visible";
+    if (getEnergyShieldMult() > 0 && game.upgrades.Battle.done)
+        document.getElementById("blockDiv").style.visibility = "visible";
+
+    if (game.global.gridArray.length > 0) {
+        document.getElementById("battleContainer").style.visibility = "visible";
+        fadeIn("equipmentTab", 10);
+        fadeIn("equipmentTitleDiv", 10);
+        drawGrid();
+        if (checkIfSpireWorld() && !game.global.spireActive) clearSpireMetals();
+        document.getElementById("metal").style.visibility = "visible";
+        for (var x = 0; x <= game.global.lastClearedCell; x++) {
+            swapClass("cellColor", "cellColorBeaten", document.getElementById("cell" + x));
+        }
+        if (game.global.battleClock > 0) document.getElementById("battleTimer").style.visibility = "visible";
+    }
+    if (game.global.mapGridArray.length > 0 && game.global.currentMapId !== "") {
+        drawGrid(true);
+        for (var y = 0; y <= game.global.lastClearedMapCell; y++) {
+            swapClass("cellColor", "cellColorBeaten", document.getElementById("mapCell" + y));
+        }
+    } else if (game.global.mapGridArray.length === 0 && game.global.mapsActive) game.global.mapsActive = false;
+    if (game.resources.trimps.owned > 0 || game.buildings.Trap.owned > 0) game.buildings.Trap.first();
+    if (game.global.autoBattle) {
+        fadeIn("pauseFight", 1);
+        pauseFight(true);
+    }
+    for (var itemC in game.global.mapsOwnedArray) {
+        if (game.global.mapsOwnedArray[itemC].name == "Dimension of Anger") game.global.mapsOwnedArray[itemC].level = 20;
+        unlockMap(itemC);
+    }
+    for (var messageBool in game.global.messages) {
+        if (!game.global.messages[messageBool].enabled) {
+            filterMessage(messageBool, true);
+        }
+    }
+    game.global.buyTab = "all";
+    filterTabs("all");
+    if (game.global.mapsUnlocked) unlockMapStuff();
+    repeatClicked(true);
+    document.getElementById("worldNumber").innerHTML = game.global.world;
+    mapsSwitch(true);
+    checkTriggers(true);
+    toggleAutoTrap(true);
+    toggleAutoStructure(true);
+    toggleAutoJobs(true);
+    toggleAutoEquip(true);
+    toggleAutoGolden(true);
+    document.getElementById("goldConfig").style.display = game.global.canGuString ? "block" : "none";
+    setGather(game.global.playerGathering);
+    numTab(1);
+    if (!fromPf && game.options.menu.usePlayFab.enabled == 1) {
+        game.options.menu.usePlayFab.enabled = 0;
+        toggleSetting("usePlayFab", null, false, true);
+        if (!enablePlayFab()) noOfflineTooltip = true;
+    }
+    if (fromPf) {
+        game.options.menu.usePlayFab.enabled = 1;
+        toggleSetting("usePlayFab", null, false, true);
+    }
+    if (game.global.portalActive) {
+        fadeIn("portalBtn", 10);
+        fadeIn("helium", 10);
+    } else if (game.resources.helium.owned > 0 || game.resources.radon.owned > 0) fadeIn("helium", 10);
+    document.getElementById("heliumName").innerHTML = heliumOrRadon();
+    document.getElementById("goodGuyBlockName").innerHTML =
+        game.global.universe == 2 ? "<span class='energyShieldIcon icomoon icon-shield2'></span>" : "BLK";
+    if (game.jobs.Explorer.locked === 0) fadeIn("fragmentsPs", 10);
+    if (game.buildings.Tribute.locked === 0 || game.options.menu.useAverages.enabled) fadeIn("gemsPs", 10);
+    if (game.global.autoCraftModifier > 0)
+        document.getElementById("foremenCount").innerHTML = game.global.autoCraftModifier * 4 + " Foremen";
+    if (game.global.fighting && game.global.soldierHealth <= 0) fight();
+    else if (game.global.fighting) startFight();
+    game.options.menu.darkTheme.onToggle();
+    updateLabels();
+    if (game.global.viewingUpgrades) {
+        viewPortalUpgrades();
+        if (game.global.respecActive) respecPerks();
+    } else game.global.respecActive = false;
+    if (game.global.kongBonusMode) activateKongBonus();
+    if (game.global.challengeActive !== "") {
+        var challengeList;
+        if (game.challenges[game.global.challengeActive].multiChallenge)
+            challengeList = game.challenges[game.global.challengeActive].multiChallenge;
+        else challengeList = [game.global.challengeActive];
+        for (var cha = 0; cha < challengeList.length; cha++) {
+            if (typeof game.challenges[challengeList[cha]].onLoad !== "undefined")
+                game.challenges[challengeList[cha]].onLoad();
+        }
+    }
+    if (game.global.challengeActive != "Scientist") document.getElementById("scienceCollectBtn").style.display = "block";
+    if (game.global.brokenPlanet) {
+        document.getElementById("wrapper").style.background = "url(css/bg2_vert.png) center repeat-y";
+        document.getElementById("wrapper").className = "wrapperBroken";
+        if (game.global.roboTrimpLevel > 0) displayRoboTrimp();
+    }
+    if (challengeActive("Balance") || game.global.challengeActive == "Unbalance") {
+        updateBalanceStacks();
+    }
+    u2Mutations.checkStacks();
+    if (game.global.spireActive) handleExitSpireBtn();
+    game.options.displayed = false;
+    game.options.menu.barOutlines.onToggle();
+    game.options.menu.progressBars.onToggle();
+    game.options.menu.autoSave.onToggle();
+    game.options.menu.tinyButtons.onToggle();
+    if (usingScreenReader) game.options.menu.showSRInfo.onToggle();
+
+    displayPerksBtn();
+    displayGoldenUpgrades();
+    if (game.global.highestLevelCleared >= 180 && game.global.tabForMastery) updateTalentNumbers();
+    //3.6 bug fix
+    if (getAchievementStrengthLevel() <= 0) {
+        game.global.goldenUpgrades = 0;
+        for (var item in game.goldenUpgrades) {
+            game.goldenUpgrades[item].currentBonus = 0;
+        }
+    }
+    fireMode(true);
+
+    if (game.global.autoUpgradesAvailable) {
+        document.getElementById("autoUpgradeBtn").style.display = "block";
+        toggleAutoUpgrades(true);
+    }
+    if (game.global.sLevel >= 4) {
+        document.getElementById("autoPrestigeBtn").style.display = "block";
+        toggleAutoPrestiges(true);
+    }
+    if (game.global.autoStorageAvailable) {
+        document.getElementById("autoStorageBtn").style.display = "block";
+        toggleAutoStorage(true);
+    }
+    unlockFormation("all");
+    setFormation();
+    game.permaBoneBonuses.boosts.updateBtn();
+    toggleSetting("mapLoot", null, false, true);
+    toggleSetting("repeatUntil", null, false, true);
+    toggleSetting("exitTo", null, false, true);
+    toggleSetting("repeatVoids", null, false, true);
+    toggleSetting("mapAtZone", null, false, true);
+    game.global.removingPerks = false;
+    game.global.switchToMaps = false;
+
+    if (game.global.voidBuff) setVoidBuffTooltip();
+    if (game.upgrades.Gigastation.done >= 1) loadGigastations();
+    checkChallengeSquaredAllowed();
+
+    if (oldVersion < 2) {
+        if (game.global.world == 59) {
+            game.global.gridArray[99].name = "Improbability";
+            message("Your Scientists have detected an anomaly at the end of this Zone. Exercise caution.", "Notices");
+        } else if (game.global.world == 60 && game.global.lastClearedCell <= 10) {
+            planetBreaker();
+            game.global.world = 59;
+            nextWorld();
+        } else if (game.global.world >= 60) {
+            message(
+                "There is a new anomaly at 59, but you are too far past to reach it. You will have to use your portal to see the changes it brings. It looks like you have access to a new challenge, however!",
+                "Notices",
+            );
+        } else {
+            message(
+                "Your scientists have detected an anomaly at the end of Zone 59. They warn you to be careful if you intend to approach it.",
+                "Notices",
+            );
+        }
+    }
+    document.getElementById("tab5Text").innerHTML = "+" + prettify(game.global.lastCustomAmt);
+    game.global.lastUnlock = 0;
+    if (game.resources.gems.owned > 0) fadeIn("gems", 10);
+    updateSkeleBtn();
+    if (game.talents.turkimp2.purchased || game.global.turkimpTimer > 0)
+        document.getElementById("turkimpBuff").style.display = "block";
+    if (game.stats.totalHeirlooms.value + game.stats.totalHeirlooms.valueTotal > 0)
+        document.getElementById("heirloomBtnContainer").style.display = "block";
+    calculateAchievementBonus();
+    if (game.global.firing) swapClass("fireBtn", "fireBtnFiring", document.getElementById("fireBtn"));
+    else swapClass("fireBtn", "fireBtnNotFiring", document.getElementById("fireBtn"));
+    loadSingleBonusColors();
+    handlePoisonDebuff();
+    handleIceDebuff();
+    handleWindDebuff();
+    setEmpowerTab();
+    refreshMaps();
+    setAdvMaps2UnlockText();
+    countChallengeSquaredReward();
+    manageEqualityStacks();
+    setTrimpColSize();
+    setUniverseStyle();
+    if (game.global.tutorialActive) tutorial.load();
+    if (game.global.totalVoidMaps > 0 && !game.global.mapsActive) addVoidAlert();
+    if (!game.options.menu.pauseGame.enabled) {
+        //If not paused and offline progress is enabled, run offline progress
+        if (game.options.menu.offlineProgress.enabled) checkOfflineProgress(noOfflineTooltip);
+        //If not paused and offline progress is disabled, fix clock
+        else {
+            var timeToAdd = new Date().getTime() - game.global.lastOnline;
+            game.global.portalTime += timeToAdd;
+            game.global.zoneStarted += timeToAdd;
+        }
+    }
+    //If paused, set clock pulse
+    else {
+        handlePauseMessage(true);
+        updatePortalTimer();
+        document.getElementById("portalTimer").className = "timerPaused";
+    }
+    return true;
 }
 
 function compareVersion(compareTo, compare, parseFirst) {
@@ -21841,6 +21874,477 @@ var Fluffy = {
         },
     },
 };
+//PlayFab Stuff
+
+var playFabId = -1;
+
+function enablePlayFab() {
+    var loggedIn = playFabId != -1;
+    if (!loggedIn) {
+        tooltip("PlayFab Login", null, "update");
+        loggedIn = tryPlayFabAutoLogin();
+    }
+    if (playFabId == -1) {
+        return false;
+    }
+    return true;
+}
+
+function tryPlayFabAutoLogin() {
+    var type = game.global.playFabLoginType;
+    //-1 = not set, 1 = Kongregate, 2 = PlayFab
+    if (type == -1) return false;
+    if (type == 1) {
+        playFabLoginWithKongregate();
+        return true;
+    }
+    if (type == 2) {
+        var info = readPlayFabInfo();
+        if (!info) return false;
+        playFabLoginWithPlayFab(info[0], info[1], type == 2);
+        game.global.playFabLoginType = type;
+        return true;
+    }
+    return false;
+}
+
+function getPlayFabLoginHTML() {
+    var tipHtml = [];
+    tipHtml[0] = "<div id='playFabLoginError'></div><div class='row playFabRow'>";
+    if (typeof kongregate !== "undefined") {
+        var userId =
+            kongregate && kongregate.services && kongregate.services.getUserId ? kongregate.services.getUserId() : 0;
+        tipHtml[0] += "<div id='playFabKongregateContainer' class='col-xs-6'><b>Login With Kongregate</b><br/>";
+        if (userId > 0) {
+            tipHtml[0] +=
+                "<div id='playFabKongLoggedIn'>Click the button below to link a PlayFab account to your Kongregate account and begin or resume backing up your save online!<br/><br/><div class='alignCenter'><span class='btn btn-sm btn-primary' onclick='playFabLoginWithKongregate()'>Connect Kongregate<br/>To PlayFab</span></div></div>";
+        } else
+            tipHtml[0] +=
+                "<div id='playFabKongNotLoggedIn'>You are playing from Kongregate, but not logged in.<span class='inactiveBtn''>Must Be Logged In</span></div>";
+        tipHtml[0] += "</div>";
+    } else {
+        var info = false;
+        if (game.global.rememberInfo) {
+            info = readPlayFabInfo();
+        }
+        tipHtml[0] +=
+            "<div id='playFabLoginContainer' class='col-xs-6'><b id='playFabLoginTitle'>Login to PlayFab</b><br/><span id='playFabEmailHidden' style='display: none'>Your Email<br/><span id='emailNotice' style='font-size: 0.8em'>(For recovery, not required)<br/></span><input type='text' id='registerEmail' /></span><span id='usernameBox'>PlayFab Username<br/><input type='text' id='loginUserName' " +
+            (info ? "value='" + info[0] + "'" : "") +
+            "/></span><span id='playFabPasswordBox'><br/>Password <span style='font-size: 0.8em'>(6-30 Chars)</span><br/><input type='password' id='loginPassword'" +
+            (info ? " value='" + info[1] + "'" : "") +
+            "/></span><br/><div id='playFabConfirmPasswordHidden' style='display: none'>Confirm Password<br/><input type='password' id='confirmPassword' /><br/></div><label id='rememberInfoBox'>Remember Account Info<br/>" +
+            buildNiceCheckbox("rememberInfo", false, info ? true : false) +
+            "<br/></label><div id='playFabLoginBtn' class='btn btn-sm btn-info' onclick='playFabLoginWithPlayFab()'>Login</div><div id='playFabRegisterBtn' class='btn btn-sm btn-info' style='display: none' onclick='playFabRegisterPlayFabUser()'>Register</div><span style='display: none' id='playFabRecoverBtns'><div class='btn btn-sm btn-info' onclick='playFabRecoverInfo(false)' style='display: none'>Get Username</div><div class='btn btn-sm btn-primary' onclick='playFabRecoverInfo(true)'>Send Password Reset Email</div></span><div id='playFabSwitchRegisterBtn' onclick='switchForm(true)' class='btn btn-sm btn-primary'>Register Playfab Account</div><div id='playFabSwitchRecoveryBtn' onclick='switchForm(false)' class='btn btn-sm btn-warning'>Recover Account Info</div></div>";
+    }
+    tipHtml[0] +=
+        "<div id='playFabLoginInfo' class='col-xs-6'><ul><li>While connected to PlayFab, every time you manually save and <b>once per 30 minutes when auto-saving</b>, your file will also be sent to PlayFab's servers.</li><li>Data will be cleared from PlayFab's servers after 3 months of inactivity, this is not a permanent save!</li></ul>";
+    tipHtml[1] = "<div class='btn btn-sm btn-danger' onclick='cancelTooltip()'>Cancel</div>";
+    return tipHtml;
+}
+
+function switchForm(register) {
+    //true for register, false for recovery
+    var title = document.getElementById("playFabLoginTitle");
+    var emailInput = document.getElementById("playFabEmailHidden");
+    var loginBtn = document.getElementById("playFabLoginBtn");
+    var registerBtn = document.getElementById("playFabRegisterBtn");
+    var recoverBtn = document.getElementById("playFabRecoverBtns");
+    var switchBtn = document.getElementById("playFabSwitchRegisterBtn");
+    var passBox = document.getElementById("playFabPasswordBox");
+    var nameBox = document.getElementById("usernameBox");
+    var rememberBox = document.getElementById("rememberInfoBox");
+    var emailNotice = document.getElementById("emailNotice");
+    var switchRecoveryBtn = document.getElementById("playFabSwitchRecoveryBtn");
+    var confirmPasswordBtn = document.getElementById("playFabConfirmPasswordHidden");
+    if (emailInput != null) emailInput.style.display = "block";
+    if (loginBtn != null) loginBtn.style.display = "none";
+    if (registerBtn != null && register) registerBtn.style.display = "inline-block";
+    else if (recoverBtn != null && !register) recoverBtn.style.display = "inline-block";
+    if (nameBox != null && !register) nameBox.style.display = "none";
+    if (emailNotice != null && !register) emailNotice.style.display = "none";
+    if (switchBtn != null) switchBtn.style.display = "none";
+    if (passBox != null && !register) passBox.style.display = "none";
+    if (rememberBox != null && !register) rememberBox.style.display = "none";
+    if (switchRecoveryBtn != null) switchRecoveryBtn.style.display = "none";
+    if (confirmPasswordBtn != null && register) confirmPasswordBtn.style.display = "block";
+    if (title != null)
+        title.innerHTML = register
+            ? "Register a PlayFab Account"
+            : "Recover PlayFab Account Info - <i>Must have provided Email during registration</i>";
+}
+
+function playFabRecoverInfo(needsPassword) {
+    var error = document.getElementById("playFabLoginError");
+    var emailElem = document.getElementById("registerEmail");
+    var requestData = {
+        TitleId: "9186",
+        Email: emailElem.value,
+    };
+    if (needsPassword) {
+        try {
+            PlayFab.ClientApi.SendAccountRecoveryEmail(requestData, playFabRecoverCallback);
+        } catch (e) {
+            if (error != null) error.innerHTML = e.errorMessage;
+        }
+        return;
+    }
+    try {
+        PlayFab.ClientApi.GetAccountInfo(requestData, playFabRecoverCallback);
+    } catch (e) {
+        console.log(e);
+        if (error != null) error.innerHTML = e.errorMessage;
+    }
+}
+
+function playFabRecoverCallback(data, error) {
+    var errorElem = document.getElementById("playFabLoginError");
+    console.log(data, error);
+    if (errorElem == null) return;
+    if (error) {
+        errorElem.innerHTML = error.errorMessage;
+        return;
+    }
+    if (data.Username) {
+        errorElem.innerHTML = "<span style='color: green'>Username is " + data.Username + "</span>";
+        return;
+    }
+    if (data.status == "OK") errorElem.innerHTML = "<span style='color: green'>Recovery Email Sent!</span>";
+}
+
+function switchFormToRecovery() {
+    var title = document.getElementById("playFabLoginTitle");
+    if (title != null) var emailInput = document.getElementById("playFabEmailHidden");
+    if (emailInput != null) emailInput.style.display = block;
+}
+
+function playFabRegisterPlayFabUser() {
+    var error = document.getElementById("playFabLoginError");
+    if (typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") {
+        error.innerHTML =
+            "Unable to Initialize the PlayFab API. Please check to make sure third-party scripts are enabled for Trimps, and that PlayFab is not blocked.";
+        return;
+    }
+    var saveLogin = false;
+    var nameElem = document.getElementById("loginUserName");
+    var passElem = document.getElementById("loginPassword");
+    var emailElem = document.getElementById("registerEmail");
+    var rememberElem = document.getElementById("rememberInfo");
+    var confirmPasswordElem = document.getElementById("confirmPassword");
+    if (rememberElem && rememberElem.dataset.checked == "true") saveLogin = true;
+    if (nameElem == null || passElem == null || emailElem == null || rememberElem == null || confirmPasswordElem == null) {
+        //Elements required to register are missing, rebuild login screen
+        tooltip("PlayFab Login", null, "update");
+        return;
+    }
+    if (confirmPasswordElem.value != passElem.value) {
+        error.innerHTML = "Passwords do not match!";
+        return;
+    }
+    var requestData = {
+        TitleId: "9186",
+        Username: nameElem.value,
+        Password: passElem.value,
+        RequireBothUsernameAndEmail: false,
+    };
+    if (emailElem.value) {
+        requestData.Email = emailElem.value;
+        requestData.RequireBothUsernameAndEmail = true;
+    }
+    try {
+        PlayFab.ClientApi.RegisterPlayFabUser(requestData, playFabLoginCallback);
+        if (saveLogin) {
+            storePlayFabInfo(username, pass);
+            game.global.playFabLoginType = 2;
+        } else game.global.playFabLoginType = -1;
+    } catch (e) {
+        error.innerHTML = "Unable to send registration request to PlayFab.";
+    }
+}
+
+function playFabLoginWithPlayFab(username, pass) {
+    var error = document.getElementById("playFabLoginError");
+    if (typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") {
+        error.innerHTML =
+            "Unable to Initialize the PlayFab API. Please check to make sure third-party scripts are enabled for Trimps, and that PlayFab is not blocked.";
+        return;
+    }
+    var saveLogin = false;
+    if (!username || !pass) {
+        var nameElem = document.getElementById("loginUserName");
+        var passElem = document.getElementById("loginPassword");
+        var rememberElem = document.getElementById("rememberInfo");
+        if (rememberElem && rememberElem.dataset.checked == "true") saveLogin = true;
+        if (nameElem == null || passElem == null) {
+            //Elements required to login are missing, rebuild login screen
+            tooltip("PlayFab Login", null, "update");
+            return;
+        } else {
+            username = nameElem.value;
+            pass = passElem.value;
+        }
+    }
+    var requestData = {
+        TitleId: "9186",
+        Username: username,
+        Password: pass,
+    };
+    try {
+        PlayFab.ClientApi.LoginWithPlayFab(requestData, playFabLoginCallback);
+        if (saveLogin) {
+            storePlayFabInfo(username, pass);
+            game.global.playFabLoginType = 2;
+            game.global.rememberInfo = true;
+        } else {
+            game.global.playFabLoginType = -1;
+            game.global.rememberInfo = false;
+        }
+    } catch (e) {
+        error.innerHTML = "Unable to send login request to PlayFab.";
+    }
+}
+
+function playFabLoginWithKongregate(attempt) {
+    var error = document.getElementById("playFabLoginError");
+    if (typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") {
+        if (error != null)
+            error.innerHTML =
+                "Unable to Initialize the PlayFab API. Please check to make sure third-party scripts are enabled for Trimps, and that PlayFab is not blocked.";
+        return;
+    }
+    if (typeof kongregate === "undefined") {
+        console.log("something went wrong... Kongregate defined but not defined?");
+        //This should really never get to this function if Kongregate isn't defined
+        return;
+    }
+    var userId = kongregate && kongregate.services && kongregate.services.getUserId ? kongregate.services.getUserId() : 0;
+    if (userId == 0) {
+        if (!error) tooltip("PlayFab Login", null, "update");
+        if (error) error.innerHTML = "You must be logged in to Kongregate to do that.";
+        if (
+            kongregate &&
+            (typeof kongregate.services === "undefined" || typeof kongregate.services.getUserId === "undefined")
+        ) {
+            if (!attempt) attempt = 2;
+            else attempt++;
+            if (attempt < 6) {
+                if (error)
+                    error.innerHTML +=
+                        "&nbsp;<span class='greenText'>Attempting to Connect again, attempt: " + attempt + "/5</span>";
+                setTimeout(function () {
+                    playFabLoginWithKongregate(attempt);
+                }, 1500);
+            } else if (error) error.innerHTML += " Unable to connect after 5 tries.";
+        }
+        return;
+    }
+    var authTicket = kongregate.services.getGameAuthToken();
+    var requestData = {
+        TitleId: "9186",
+        KongregateId: userId,
+        AuthTicket: authTicket,
+        CreateAccount: true,
+    };
+    try {
+        PlayFab.ClientApi.LoginWithKongregate(requestData, playFabLoginCallback);
+        game.global.playFabLoginType = 1;
+    } catch (e) {
+        error.innerHTML = "Unable to send login request to PlayFab.";
+        //Not sure if this will ever trigger, better safe
+    }
+}
+
+function playFabLoginCallback(data, error) {
+    if (error) {
+        var errorElem = document.getElementById("playFabLoginError");
+        if (errorElem != null && error.errorMessage) {
+            errorElem.style.display = "block";
+            errorElem.innerHTML = error.errorMessage;
+        }
+        return;
+    }
+    if (data) {
+        playFabId = data.data.PlayFabId;
+        if (playFabSaveErrors > 0) {
+            playFabAttemptReconnect(true);
+            return;
+        }
+        cancelTooltip();
+        playFabSaveCheck();
+    }
+}
+
+function cancelPlayFab() {
+    cancelTooltip();
+    playFabId = -1;
+    game.global.playFabLoginType = -1;
+}
+
+function playFabSaveCheck() {
+    if (playFabId == -1) return false;
+    if (typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") {
+        //Should never get this far without the api
+        console.log(error);
+        return;
+    }
+    var requestData = {
+        Keys: ["saveString"],
+        PlayFabId: playFabId,
+    };
+    try {
+        PlayFab.ClientApi.GetUserData(requestData, playFabSaveCheckCallback);
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+function playFabSaveCheckCallback(data, error) {
+    if (error || !data) {
+        console.log("error checking existing PlayFab data");
+        console.log(error);
+        return;
+    }
+    if (data) {
+        var playFabSave;
+        try {
+            playFabSave = JSON.parse(LZString.decompressFromBase64(data.data.Data.saveString.Value));
+        } catch (e) {
+            console.log(e);
+            return;
+        }
+        if (!playFabSave || !playFabSave.global) return;
+        var playFabHelium = playFabSave.global.totalHeliumEarned ? playFabSave.global.totalHeliumEarned : 0;
+        var playFabRadon = playFabSave.global.totalRadonEarned ? playFabSave.global.totalRadonEarned : 0;
+        var playFabTotalZones = playFabSave.stats.zonesCleared.value
+            ? playFabSave.stats.zonesCleared.value + playFabSave.stats.zonesCleared.valueTotal
+            : 0;
+        var playFabHighestZone = playFabSave.global.highestLevelCleared ? playFabSave.global.highestLevelCleared : 0;
+        if (
+            playFabRadon > parseFloat(game.global.totalRadon) ||
+            playFabHelium > parseFloat(game.global.totalHeliumEarned) ||
+            playFabHighestZone > parseFloat(game.global.highestLevelCleared) ||
+            playFabTotalZones > game.stats.zonesCleared.value + game.stats.zonesCleared.valueTotal
+        ) {
+            tooltip("PlayFab Conflict", null, "update", playFabHelium, playFabHighestZone, playFabTotalZones);
+            return;
+        }
+        playFabFinishLogin(false);
+    }
+}
+
+function playFabFinishLogin(downloadFirst) {
+    if (downloadFirst) {
+        loadFromPlayFab();
+        return;
+    }
+    cancelTooltip();
+    game.options.menu.usePlayFab.enabled = 1;
+    toggleSetting("usePlayFab", null, false, true);
+}
+
+function saveToPlayFab(saveString) {
+    if (game.global.isBeta) return;
+    if (!playFabId || typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") return false;
+    var requestData = {
+        TitleId: "9186",
+        Data: {
+            saveString: saveString,
+        },
+    };
+    try {
+        PlayFab.ClientApi.UpdateUserData(requestData, saveToPlayFabCallback);
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+var playFabSaveErrors = 0;
+
+function saveToPlayFabCallback(data, error) {
+    if (error) {
+        playFabSaveErrors++;
+        message(
+            "Unable to back up your save to PlayFab! Double check your internet connection, and don't forget to back up your save manually.",
+            "Notices",
+        );
+        swapClass("iconState", "iconStateBad", document.getElementById("playFabIndicator"));
+        console.log(error);
+        if (playFabId != -1) {
+            playFabAttemptReconnect();
+        }
+        return false;
+    }
+    if (data) {
+        swapClass("iconState", "iconStateGood", document.getElementById("playFabIndicator"));
+        lastOnlineSave = performance.now();
+        message("Game saved and backed up to PlayFab! Next automatic online save in 2 hours.", "Notices", null, "save");
+        return true;
+    }
+}
+
+function playFabAttemptReconnect(reconnected) {
+    console.log(reconnected ? "Reconnected" : "Attempting to reconnect");
+    if (reconnected) {
+        playFabSaveErrors = 0;
+        message("Reconnected to PlayFab!", "Notices", null, "save");
+        swapClass("iconState", "iconStateGood", document.getElementById("playFabIndicator"));
+        return;
+    }
+    if (game.global.playFabLoginType >= 1) tryPlayFabAutoLogin();
+}
+
+function loadFromPlayFab() {
+    if (!playFabId || typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") return false;
+    var requestData = {
+        Keys: ["saveString"],
+        PlayFabId: playFabId,
+    };
+    try {
+        PlayFab.ClientApi.GetUserData(requestData, loadFromPlayFabCallback);
+    } catch (e) {
+        console.log(e);
+    }
+}
+
+function loadFromPlayFabCallback(data, error) {
+    if (error) {
+        console.log(error);
+        return;
+    }
+    if (data) {
+        var id = playFabId;
+        if (load(data.data.Data.saveString.Value, false, true)) {
+            playFabId = id;
+            playFabFinishLogin();
+            game.options.displayed = document.getElementById("settingsHere").style.display == "block";
+            return;
+        }
+        game.options.menu.usePlayFab.enabled = 0;
+        toggleSetting("usePlayFab", null, false, true);
+        playFabId = -1;
+    }
+}
+
+function storePlayFabInfo(name, pass) {
+    try {
+        localStorage.setItem("playFabName", name);
+        localStorage.setItem("playFabPass", pass);
+    } catch (e) {
+        console.log(e);
+    }
+    return false;
+}
+
+function readPlayFabInfo() {
+    var info = [false, false];
+    try {
+        info[0] = localStorage.getItem("playFabName");
+        info[1] = localStorage.getItem("playFabPass");
+    } catch (e) {
+        console.log(e);
+    }
+    if (info[0] && info[1]) return info;
+    return false;
+}
 
 var loops = 0;
 function gameLoop(makeUp, now) {
