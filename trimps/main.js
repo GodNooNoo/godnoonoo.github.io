@@ -21891,6 +21891,7 @@ function enablePlayFab() {
 }
 
 function tryPlayFabAutoLogin() {
+    return;
     var type = game.global.playFabLoginType;
     //-1 = not set, 1 = Kongregate, 2 = PlayFab
     if (type == -1) return false;
@@ -22104,6 +22105,7 @@ function playFabLoginWithPlayFab(username, pass) {
 }
 
 function playFabLoginWithKongregate(attempt) {
+    return;
     var error = document.getElementById("playFabLoginError");
     if (typeof PlayFab === "undefined" || typeof PlayFab.ClientApi === "undefined") {
         if (error != null)
