@@ -245,14 +245,6 @@ function save(exportThis, fromManual) {
             );
         } else message("For some reason, your game is not saving. Make sure you export and back up your save!", "Notices");
     }
-
-    if (game.options.menu.usePlayFab.enabled == 1 && playFabId) {
-        var timeSinceSave = performance.now() - lastOnlineSave;
-        if ((timeSinceSave < 7200000 && !fromManual) || timeSinceSave < 60000) {
-            return;
-        }
-        saveToPlayFab(saveString);
-    }
 }
 
 function load(saveString, autoLoad, fromPf) {
@@ -278,10 +270,6 @@ function load(saveString, autoLoad, fromPf) {
                 "Notices",
             );
             return false;
-        } else if (fromImport) {
-            game.options.menu.usePlayFab.enabled = 0;
-            toggleSetting("usePlayFab", null, false, true);
-            playFabId = -1;
         }
     } else {
         try {
@@ -1241,15 +1229,6 @@ function load(saveString, autoLoad, fromPf) {
     document.getElementById("goldConfig").style.display = game.global.canGuString ? "block" : "none";
     setGather(game.global.playerGathering);
     numTab(1);
-    if (!fromPf && game.options.menu.usePlayFab.enabled == 1) {
-        game.options.menu.usePlayFab.enabled = 0;
-        toggleSetting("usePlayFab", null, false, true);
-        if (!enablePlayFab()) noOfflineTooltip = true;
-    }
-    if (fromPf) {
-        game.options.menu.usePlayFab.enabled = 1;
-        toggleSetting("usePlayFab", null, false, true);
-    }
     if (game.global.portalActive) {
         fadeIn("portalBtn", 10);
         fadeIn("helium", 10);
@@ -22234,6 +22213,7 @@ function playFabSaveCheckCallback(data, error) {
 }
 
 function playFabFinishLogin(downloadFirst) {
+    return;
     if (downloadFirst) {
         loadFromPlayFab();
         return;
@@ -22308,6 +22288,7 @@ function loadFromPlayFab() {
 }
 
 function loadFromPlayFabCallback(data, error) {
+    return;
     if (error) {
         console.log(error);
         return;
